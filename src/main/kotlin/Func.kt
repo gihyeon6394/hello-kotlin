@@ -18,8 +18,11 @@ fun main() {
     // lamda expression
     println({ str: String -> str.uppercase() }("hello"))
 
-    val upperCaseStr = { str: String -> str.uppercase() }
-    println(upperCaseStr("hello"))
+    val upperCaseStr1: (String) -> String = { str -> str.uppercase() }
+
+    // Trailing lambdas : 파라미터가 하나면 () 생략 가능
+    val upperCaseStr2 = { str: String -> str.uppercase() }
+    println(upperCaseStr2("hello"))
 
     val numbers = listOf(1, 2, 3, 4, 5)
 
@@ -34,6 +37,8 @@ fun main() {
     val totalSecs = timesInMin.map(min2sec).sum()
     println(totalSecs)
 
+    // trailing lambdas
+    listOf(1, 2, 3).fold(0, { x, item -> x + item })
     listOf(1, 2, 3).fold(0) { x, item -> x + item }
 
     // Exercise 1
@@ -67,10 +72,13 @@ fun circleArea(radius: Int): Double {
     return Math.PI * radius * radius
 }
 
+// return type : double (type inference)
 fun circleAreaSingle(radius: Int) = Math.PI * radius * radius
 
 fun intervalInSeconds(hours: Int = 0, min: Int = 0, sec: Int = 0) = ((hours * 60) + min) * 60 + sec
 
+// parameter type : String
+// return type : (Int) -> Int
 fun toSecs(time: String): (Int) -> Int = when (time) {
     "hour" -> { value -> value * 60 * 60 }
     "min" -> { value -> value * 60 }
