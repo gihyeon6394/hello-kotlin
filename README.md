@@ -1,10 +1,10 @@
 # Hello kotlin
 
-### reference
+## reference
 
 - https://kotlinlang.org/docs/kotlin-tour-hello-world.html
 
-### contents
+## contents
 
 1. Hello world
 2. Basic types
