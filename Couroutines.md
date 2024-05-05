@@ -31,6 +31,57 @@ reference : https://kotlinlang.org/docs/coroutines-guide.html
 
 ## Coroutines basics
 
+### Your first coroutine
+
+- **coroutine** : 중지가능한 연산을 하는 인스턴스
+- 스레드와 비슷한 면 : 실행중인 코드 block 가능
+- 코루틴은 스레드와 다름 : 스레드 안에서 중지 가능하고 다른 스레드에서 계속할 수 있다.
+
+```kotlin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+
+fun main() = runBlocking {
+    launch {
+        delay(1000L)
+        println("World!")
+    }
+
+    println("Hello,")
+}
+```
+
+```shell
+Hello,
+World!
+```
+
+- `launch` : 코루틴 빌더
+    - 새로운 코루틴을 시작하고 실행한다.
+- `delay` : 일시 중지 함수 (suspend function)
+    - 코루틴을 특정 시간동안 중지
+- `runBlocking` : 실행 중인 스레드 (`fun main()`)가 blocked
+    - non coroutines world (`fun main()`)과 연결
+    - 없이 `launch`를 사용하면 에러 발생 `Unresolved reference: launch`
+
+#### Structured concurrency
+
+- Structured concurrency : 새로운 코루틴은 CoroutineScope에서만 launch 가능
+- CoroutineScope : 코루틴의 lifecycle, scope을 관리하는 인터페이스
+- 위에서는 `runBlocking` 으로 새로운 CoroutineScope를 만들었다.
+- CoroutineScope은 자식 코루틴들이 완료되기 전까지 실행을 끝내지 않는다.
+
+### Extract function refactoring
+
+### Scope builder
+
+### Scope builder and concurrency
+
+### An explicit job
+
+### Coroutines are light-weight
+
 ## Coroutines and channels-tutorial
 
 ## Composing suspending functions
