@@ -75,7 +75,8 @@ World!
 ### Extract function refactoring
 
 - `launch` 를 별도의 함수로 추출
-- `suspend` modifier : 중지가능한 함수를 선언할 때 사용
+- `suspend` modifier : suspending function을 선언
+    - suspending function : 코루틴 안에서 사용 가능한 함수이지만, 코루틴 중지 가능
 - **suspending function** : 코루틴을 중지 가능한 함수 (코루틴 안에서 사용)
 
 ```kotlin
@@ -99,10 +100,10 @@ suspend fun doWorld() {
 
 - `coroutineScope` : 코루틴을 실행하는 블록을 만들어주는 함수
 
-|     | `runBlocking`                      | `coroutineScope`                   |
-|-----|------------------------------------|------------------------------------|
-| 공통점 | 코루틴을 실행하는 블록, children이 완료될떄까지 기다림 | 코루틴을 실행하는 블록, children이 완료될때까지 기다림 |
-| 차이점 | 실행 중인 스레드를 block                   | 중지하고 스레드를 다른 곳으로 사용가능하게 해줌         |
+|     | `runBlocking`                      | `coroutineScope`                       |
+|-----|------------------------------------|----------------------------------------|
+| 공통점 | 코루틴을 실행하는 블록, children이 완료될떄까지 기다림 | 코루틴을 실행하는 블록, children이 완료될때까지 기다림     |
+| 차이점 | 실행 중인 스레드를 block                   | 중지하고, thread 를 release하고, 다시 시작할 수 있다. |
 
 ```kotlin
 fun main() = runBlocking {
@@ -119,6 +120,29 @@ suspend fun doWorld() = coroutineScope {  // this: CoroutineScope
 ```
 
 ### Scope builder and concurrency
+
+- `coroutineScope` builder는 suspending function 내부 어디에서든 사용 가능
+
+```kotlin
+// Sequentially executes doWorld followed by "Done"
+fun main() = runBlocking {
+        doWorld()
+        println("Done")
+    }
+
+// Concurrently executes both sections
+suspend fun doWorld() = coroutineScope { // this: CoroutineScope
+    launch {
+        delay(2000L)
+        println("World 2")
+    }
+    launch {
+        delay(1000L)
+        println("World 1")
+    }
+    println("Hello")
+}
+```
 
 ### An explicit job
 
