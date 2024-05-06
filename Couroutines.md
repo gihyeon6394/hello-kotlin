@@ -97,6 +97,27 @@ suspend fun doWorld() {
 
 ### Scope builder
 
+- `coroutineScope` : 코루틴을 실행하는 블록을 만들어주는 함수
+
+|     | `runBlocking`                      | `coroutineScope`                   |
+|-----|------------------------------------|------------------------------------|
+| 공통점 | 코루틴을 실행하는 블록, children이 완료될떄까지 기다림 | 코루틴을 실행하는 블록, children이 완료될때까지 기다림 |
+| 차이점 | 실행 중인 스레드를 block                   | 중지하고 스레드를 다른 곳으로 사용가능하게 해줌         |
+
+```kotlin
+fun main() = runBlocking {
+    doWorld()
+}
+
+suspend fun doWorld() = coroutineScope {  // this: CoroutineScope
+    launch {
+        delay(1000L)
+        println("World!")
+    }
+    println("Hello")
+}
+```
+
 ### Scope builder and concurrency
 
 ### An explicit job
