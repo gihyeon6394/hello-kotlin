@@ -201,6 +201,82 @@ fun main() {
 
 ### Blocking requests
 
+![img.png](img.png)
+
+```kotlin
+interface GitHubService {
+    /**
+     * Get a list of the repositories for the organization.
+     */
+    @GET("orgs/{org}/repos?per_page=100")
+    fun getOrgReposCall(
+        @Path("org") org: String
+    ): Call<List<Repo>>
+
+    /**
+     * Get a list of the contributors to a repository.
+     */
+    @GET("repos/{owner}/{repo}/contributors?per_page=100")
+    fun getRepoContributorsCall(
+        @Path("owner") owner: String,
+        @Path("repo") repo: String
+    ): Call<List<User>>
+}
+
+fun loadContributorsBlocking(service: GitHubService, req: RequestData): List<User> {
+
+    // repository 정보를 가져옴
+    val repos = service
+        .getOrgReposCall(req.org)
+        .execute() // Executes request and blocks the current thread
+        .also { logRepos(req, it) }
+        .body() ?: emptyList()
+
+    // 각 repository의 contributor 정보를 가져옴
+    return repos.flatMap { repo ->
+        service
+            .getRepoContributorsCall(req.org, repo.name)
+            .execute() // Executes request and blocks the current thread
+            .also { logUsers(repo, it) }
+            .bodyList()
+    }.aggregate()
+}
+
+fun <T> Response<List<T>>.bodyList(): List<T> {
+    return body() ?: emptyList()
+}
+```
+
+### Task 1
+
+- `aggregate()` : `List<User>`를 받아서
+    - 같은 이름 (`login`)을 가진 `User`를 합침
+    - 합친 후, `contributions`를 기준으로 내림차순 정렬
+
+```kotlin
+class AggregationKtTest {
+    @Test
+    fun testAggregation() {
+        val actual = listOf(
+            User("Alice", 1), User("Bob", 3),
+            User("Alice", 2), User("Bob", 7),
+            User("Charlie", 3), User("Alice", 5)
+        ).aggregate()
+        val expected = listOf(
+            User("Bob", 10),
+            User("Alice", 8),
+            User("Charlie", 3)
+        )
+        Assert.assertEquals("Wrong result for 'aggregation'", expected, actual)
+    }
+}
+
+fun List<User>.aggregate(): List<User> =
+    groupBy { it.login }
+        .map { (login, group) -> User(login, group.sumOf { it.contributions }) }
+        .sortedByDescending { it.contributions }
+```
+
 ### Callbacks
 
 ### Suspending functions
