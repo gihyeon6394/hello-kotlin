@@ -146,6 +146,24 @@ suspend fun doWorld() = coroutineScope { // this: CoroutineScope
 
 ### An explicit job
 
+- `launch` builder는 Job 오브젝트를 반환
+- 명시적으로 Job을 관리할 수 있음
+
+```kotlin
+import kotlinx.coroutines.*
+
+suspend fun explicitJob() = coroutineScope {
+    val job = launch {
+        delay(1000L)
+        println("World!")
+    }
+
+    println("Hello,")
+    job.join() // wait until child coroutine completes
+    println("Done")
+}
+```
+
 ### Coroutines are light-weight
 
 ## Coroutines and channels-tutorial

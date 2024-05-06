@@ -1,14 +1,13 @@
 package coroutines
 
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 
 // Sequentially executes doWorld followed by "Done"
 fun main() = runBlocking {
     doWorld()
     println("Done")
+    println("====")
+    explicitJob()
 }
 
 // Concurrently executes both sections
@@ -22,4 +21,15 @@ suspend fun doWorld() = coroutineScope { // this: CoroutineScope
         println("World 1")
     }
     println("Hello")
+}
+
+suspend fun explicitJob() = coroutineScope {
+    val job = launch {
+        delay(1000L)
+        println("World!")
+    }
+
+    println("Hello,")
+    job.join() // wait until child coroutine completes
+    println("Done")
 }
