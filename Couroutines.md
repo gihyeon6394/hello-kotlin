@@ -74,6 +74,27 @@ World!
 
 ### Extract function refactoring
 
+- `launch` 를 별도의 함수로 추출
+- `suspend` modifier : 중지가능한 함수를 선언할 때 사용
+- **suspending function** : 코루틴을 중지 가능한 함수 (코루틴 안에서 사용)
+
+```kotlin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+
+fun main() = runBlocking {
+    launch { doWorld() }
+
+    println("Hello,")
+}
+
+suspend fun doWorld() {
+    delay(1000L)
+    println("World!")
+}
+```
+
 ### Scope builder
 
 ### Scope builder and concurrency
