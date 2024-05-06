@@ -166,6 +166,31 @@ suspend fun explicitJob() = coroutineScope {
 
 ### Coroutines are light-weight
 
+- 코루틴은 JVM 스레드보다 resource를 적게 사용
+
+```kotlin
+import kotlinx.coroutines.*
+
+fun main() = runBlocking {
+  repeat(50_000) { // 50000 개의 개별적인 코루틴 생성, launch는 suspend function (=스레드에게 제어권을 양보)
+    launch {
+      delay(5000L)
+      print(".")
+    }
+  }
+}
+
+// using java thread
+fun main() {
+  repeat(50_000) {
+    thread {
+      Thread.sleep(5000L)
+      print(".")
+    }
+  }
+}
+```
+
 ## Coroutines and channels-tutorial
 
 ## Composing suspending functions
