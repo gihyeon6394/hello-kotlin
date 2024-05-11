@@ -279,6 +279,88 @@ fun List<User>.aggregate(): List<User> =
 
 ### Callbacks
 
+- callback : 비동기 작업이 완료되면 호출되는 함수
+- callback 을 사용해서 스레드를 블룅하고, UI 멈춤 현상을 해결
+- operation이 완료되고 코드를 즉시 호출하는 대신에, 콜백 (일반적으로 람다)으로 분리하여 호출자에게 전달
+
+### Use a background thread
+
+```kotlin
+thread {
+    loadContributorsBlocking(service, req)
+}
+```
+
+![img_1.png](img_1.png)
+
+````
+fun loadContributorsBackground(
+    service: GitHubService, req: RequestData,
+    updateResults: (List<User>) -> Unit
+)
+
+...
+
+fun loadContributorsBackground(service: GitHubService, req: RequestData, updateResults: (List<User>) -> Unit) {
+    thread {
+        updateResults(loadContributorsBlocking(service, req))
+    }
+}
+
+...
+
+loadContributorsBackground(service, req) { users ->
+    SwingUtilities.invokeLater {
+        updateResults(users, startTime)
+    }
+}
+````
+
+- `updateResults()` : 콜백 함수, 모두 완료되면 호출
+- `SwingUtilities.invokeLater` : UI 업데이트를 위해 사용
+
+### Use the Retrofit callback API
+
+- 순차적으로 loading request가 이루어지는 문제점 해결하기
+- loading 결과가 나올때까지 분리된 thread가 blocking 되는 문제 해결하기
+- loading + processing 중 processing을 callback으로 분리하기
+
+![img_2.png](img_2.png)
+
+- Retrofit callback API 의 `Call.enqueue()` 로 HTPP reuqest에 대한 callback을 등록할 수 있다.
+
+```kotlin
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import java.util.*
+import java.util.concurrent.atomic.AtomicInteger
+
+fun loadContributorsCallbacks(service: GitHubService, req: RequestData, updateResults: (List<User>) -> Unit) {
+    service.getOrgReposCall(req.org).onResponse { responseRepos ->
+        logRepos(req, responseRepos)
+        val repos = responseRepos.bodyList()
+        val allUsers = Collections.synchronizedList(mutableListOf<User>())
+        val numberOfProcessed = AtomicInteger()
+        for (repo in repos) {
+            service.getRepoContributorsCall(req.org, repo.name)
+                .onResponse { responseUsers ->
+                    logUsers(repo, responseUsers)
+                    val users = responseUsers.bodyList()
+                    allUsers += users
+                    if (numberOfProcessed.incrementAndGet() == repos.size) {
+                        updateResults(allUsers.aggregate())
+                    }
+                }
+        }
+    }
+}
+```
+
+- `onResponse` : `Call`에 대한 callback을 등록하는 extension function
+
+### Task 3 (optional)
+
 ### Suspending functions
 
 ### Coroutines
