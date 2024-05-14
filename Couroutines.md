@@ -359,9 +359,61 @@ fun loadContributorsCallbacks(service: GitHubService, req: RequestData, updateRe
 
 - `onResponse` : `Call`에 대한 callback을 등록하는 extension function
 
-### Task 3 (optional)
-
 ### Suspending functions
+
+- `Call<List<Repo>>` 을 리턴하는 대신 `suspend` function을 사용
+
+```kotlin
+interface GitHubService {
+    @GET("orgs/{org}/repos?per_page=100")
+    suspend fun getOrgRepos(
+        @Path("org") org: String,
+    ): List<Repo>
+}
+````
+
+- `getOrgRepos()` 은 suspend funciton
+    - reqeust 스레드는 block 되지 않음
+- `getOrgRepos()` 은 `List<Repo>`를 리턴 (Call<List<Repo>> 대신)
+
+```kotlin
+
+import retrofit2.Response
+
+interface GitHubService {
+    // getOrgReposCall & getRepoContributorsCall declarations
+
+    @GET("orgs/{org}/repos?per_page=100")
+    suspend fun getOrgRepos(
+        @Path("org") org: String,
+    ): Response<List<Repo>>
+
+    @GET("repos/{owner}/{repo}/contributors?per_page=100")
+    suspend fun getRepoContributors(
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+    ): Response<List<User>>
+}
+```
+
+- retrofit을 사용하여 `Response`를 리턴하는 suspend function을 작성, 대체 가능
+
+```kotlin
+suspend fun loadContributorsSuspend(service: GitHubService, req: RequestData): List<User> {
+    val repos = service
+        .getOrgRepos(req.org) // suspend function
+        .also { logRepos(req, it) }
+        .body() ?: emptyList()
+
+    return repos.flatMap { repo ->
+        service
+            .getRepoContributors(req.org, repo.name) // suspend function
+            .also { logUsers(repo, it) }
+            .bodyList()
+    }.aggregate()
+}
+
+```
 
 ### Coroutines
 
