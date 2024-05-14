@@ -417,6 +417,38 @@ suspend fun loadContributorsSuspend(service: GitHubService, req: RequestData): L
 
 ### Coroutines
 
+- threa가 blocking 되는 것은 coroutine이 suspend되는 것과 비슷한 개념
+- 코루틴은 경량 스레드라고도 불림 (lightweight thread)
+
+| thread | coroutine |
+|--------|-----------|
+| block  | supdend   |
+
+#### Starting a new coroutine
+
+```kotlin
+// 아래는 하나의 코루틴 @coroutine#1에서 실행됨
+// 모든 contributor를 load하고,
+// 결과를 updateResults()로 전달
+launch {
+    val users = loadContributorsSuspend(req)
+    updateResults(users, startTime)
+}
+```
+
+- `launch` : 새로운 computation 시작 (새로운 코루틴 시작)
+    - compuation은 suspendable
+    - network rquest 시 suspend되어 thread를 release
+    - network result가 오면 다시 resume
+- **coroutine** : suspendable computation
+- 코루틴은 스레드 위에서 실행되고, suspend됨
+    - suspended : computation이 일시중지, thread에서 제어권을 양보, 메모리에 저장 => thread는 다른 태스크를 수행
+- computation이 다시 실행가능해지면
+    - 스레드에 다시할당 (다른 스레드일수도 있음)
+    - 코루틴은 오직 응답이 왔을떄만 재개 가능
+
+![img_4.png](img_4.png)
+
 ### Concurrency
 
 ### Structured concurrency
