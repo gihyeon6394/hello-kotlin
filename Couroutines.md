@@ -451,6 +451,127 @@ launch {
 
 ### Concurrency
 
+- 코틀린 코루틴은 스레드보다 덜 리소를 소모함
+- 코루틴 생성 = 새로운 비동기 연산 실행
+- **coroutine builder** : 새로운 코루틴을 시작 e.g. `launch`, `async`, `runBlocking`
+- `async` : 새로운 코루틴을 싲가하고, `Deferred`를 반환
+    - `Deferred` : `Future`, `Promise`와 비슷한 개념
+        - 연산을 저장하고, **future** 에 결과를 반환할거라는 **promise**를 가짐
+- `async`와 `launch`의 차이점
+    - `launch` : 결과를 반환하지 않음
+        - `Job`을 반환 (`Job` : 코루틴을 나타냄)
+        - `Job.join()` : 코루틴이 완료될때까지 기다림
+- `Deferred` : `Job`을 확장한 제네릭 타입
+    - `async` 는 `Deferred<Int>`를 반환 (or `Deferred<CustomeType>`)
+    - `Deferred.await()` : 코루틴 결과 반환, `await()`을 호출한 코루틴은 suspended
+
+```kotlin
+import kotlinx.coroutines.*
+
+fun main() = runBlocking {
+    val deferred: Deferred<Int> = async {
+        loadData()
+    }
+    println("waiting...")
+    println(deferred.await())
+}
+
+suspend fun loadData(): Int {
+    println("loading...")
+    delay(1000L)
+    println("loaded!")
+    return 42
+}
+```
+
+```
+waiting...
+loading...
+loaded!
+42
+
+Process finished with exit code 0
+```
+
+- `runBlocking` : regular funciton과 suspending function의 브릿지
+- https://youtu.be/zEZc5AmHQhk
+
+```kotlin
+import kotlinx.coroutines.*
+
+fun main() = runBlocking {
+    val deferreds: List<Deferred<Int>> = (1..3).map {
+        async {
+            delay(1000L * it)
+            println("Loading $it")
+            it
+        }
+    }
+    val sum = deferreds.awaitAll().sum()
+    println("$sum")
+}
+```
+
+![img_5.png](img_5.png)
+
+````kotlin
+suspend fun loadContributorsConcurrent(service: GitHubService, req: RequestData): List<User> = coroutineScope {
+    val repos = service
+        .getOrgRepos(req.org)
+        .also { logRepos(req, it) }
+        .bodyList()
+
+    val deferreds: List<Deferred<List<User>>> = repos.map { repo ->
+        // 메인스레드에서 코루틴 생성
+        async {
+            service.getRepoContributors(req.org, repo.name)
+                .also { logUsers(repo, it) }
+                .bodyList()
+        }
+    }
+    deferreds.awaitAll().flatten().aggregate()
+}
+
+````
+
+````
+...
+    async(Dispatchers.Default) {
+        log("starting loading for ${repo.name}")
+        service.getRepoContributors(req.org, repo.name)
+            .also { logUsers(repo, it) }
+            .bodyList()
+    }
+...
+````
+
+- `async(Dispatchers.Default) { }` : `async` 를 사용하여 새로운 코루틴을 시작하고, `Dispatchers.Default`를 사용하여 코루틴을 실행할 스레드를 지정
+    - `CoroutineDispatcher` : 코루틴을 실행할 스레드를 지정
+    - `Dispatchers.Default` : JVM의 스레드 shared pool
+
+````
+// 메인 스레드에서 코루틴 실행
+launch(Dispatchers.Main) {
+    updateResults()
+}
+````
+
+- 메인 스레드가 바쁘면, 코루틴은 suspended
+
+````
+launch(Dispatchers.Default) {
+    val users = loadContributorsConcurrent(service, req)
+    withContext(Dispatchers.Main) {
+        updateResults(users, startTime)
+    }
+}
+````
+
+- `updateResults`는 메인 스레드에서 실행되어야 하므로, `withContext(Dispatchers.Main)`을 사용하여 메인 스레드에서 실행
+- `withContext()` : 람다를 특정한 coroutine context에서 실행
+    - 완료될 떄까지 suspended
+    - `launch(context) { ... }.join()` 과 같은 의미
+
 ### Structured concurrency
 
 ### Showing progress
