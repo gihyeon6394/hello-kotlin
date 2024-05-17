@@ -574,6 +574,135 @@ launch(Dispatchers.Default) {
 
 ### Structured concurrency
 
+- **coroutine scope** :  코루틴간의 parent-child 관계, 구조에 대한 관리를 함
+    - 새로운 코루틴은 코루틴 스코프에서 시작되어야함
+- **coroutine context** : 코루틴이 실행되는 환경에 대한 추가적인 정보들 e.g. 코루틴 커스텀 이름, 스레드 특정 가능한 디스패쳐 등
+- scope은 일반적으로 childe coroutine에 대한 책임이 있다.
+- scope은 child coroutine을 취소시킬 수 있다
+- scope은 child corouitine의 완료를 기다린다.
+    - 따라서 scope에 있는 모든 코루틴이 완료되지 않으면 parent 코루틴은 완료될 수 없다
+
+```kotlin
+launch { /* this: CoroutineScope */ }
+```
+
+- `launch` 람다의 암묵적 receiver는 `CoroutineScope` 인터페이스
+- runBlocking, launch, or async 안의 새로운 코루틴은 자동을 해당 scope에서 실행됨
+- `runBlocking` 은 top-level function으로서 현제 스레드를 block
+
+```kotlin
+import kotlinx.coroutines.*
+
+fun main() = runBlocking { /* this: CoroutineScope */
+    launch { /* ... */ }
+    // the same as:
+    this.launch { /* ... */ }
+}
+```
+
+- nested coroutine은 outer coroutne의 child로 취급
+    - scope을 통해 parent-child 관계를 유지
+- `coroutineScope()` : 새로운 scope를 만들기만 함 (코루틴 생성, 실행 없음)
+- `Global.async()`, `GlobalScope.launch()` : global scope에서 코루틴 생성
+    - top-level "independent" coroutines
+    - 코루틴의 라이프타임 한계는 application 라이프 타임
+
+#### Canceling the loading of contributors
+
+```kotlin
+suspend fun loadContributorsConcurrent(
+    service: GitHubService,
+    req: RequestData,
+): List<User> = coroutineScope {
+    // ...
+    async {
+        log("starting loading for ${repo.name}")
+        delay(3000)
+        // load repo contributors
+    }
+    // ...
+}
+```
+
+```kotlin
+interface Contributors {
+
+    fun loadContributors() {
+        // ...
+        when (getSelectedVariant()) {
+            CONCURRENT -> {
+                launch {
+                    val users = loadContributorsConcurrent(service, req)
+                    updateResults(users, startTime)
+                }.setUpCancellation()      // #1
+            }
+        }
+    }
+
+    private fun Job.setUpCancellation() {
+        val loadingJob = this              // #2
+
+        // cancel the loading job if the 'cancel' button was clicked:
+        val listener = ActionListener {
+            loadingJob.cancel()            // #3
+            updateLoadingStatus(CANCELED)
+        }
+        // add a listener to the 'cancel' button:
+        addCancelListener(listener)
+
+        // update the status and remove the listener
+        // after the loading job is completed
+    }
+}
+```
+
+- `#1` : `launch` 의 리턴값인 `Job`에 `setUpCancellation()`을 호출
+    - `Job` 에는 loading 코루틴에 대한 참조를 가짐
+
+````kotlin
+suspend fun loadContributorsNotCancellable(
+    service: GitHubService,
+    req: RequestData,
+): List<User> {   // #1
+    // ...
+    GlobalScope.async {   // #2
+        log("starting loading for ${repo.name}")
+        // load repo contributors
+    }
+    // ...
+    return deferreds.awaitAll().flatten().aggregate()  // #3
+}
+````
+
+- `loadContributorsNotCancellable` : 코루틴이 취소되지 않는다.
+    - `GlobalScope.async` : global scope에서 코루틴 생성
+    - `GlobalScope` : application life time
+    - `GlobalScope`에서 생성된 코루틴은 application이 종료될때까지 실행
+
+#### Using the outer scope's context
+
+- 모든 nested 코루틴은 자동으로 inherited context (부모 코루틴의 context)에서 시작
+
+```kotlin
+launch(Dispatchers.Default) {  // outer scope
+    val users = loadContributorsConcurrent(service, req)
+    // ...
+}
+````
+
+```kotlin
+suspend fun loadContributorsConcurrent(
+    service: GitHubService, req: RequestData,
+): List<User> = coroutineScope {
+    // this scope inherits the context from the outer scope
+    // ...
+    async {   // nested coroutine started with the inherited context
+        // ...
+    }
+    // ...
+}
+```
+
 ### Showing progress
 
 ### Channels
