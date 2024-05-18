@@ -705,6 +705,56 @@ suspend fun loadContributorsConcurrent(
 
 ### Showing progress
 
+- repo마다 데이터가 로딩되자마자 UI에 표시
+
+```kotlin
+suspend fun loadContributorsProgress(
+    service: GitHubService,
+    req: RequestData,
+    updateResults: suspend (List<User>, completed: Boolean) -> Unit
+) {
+    val repos = service
+        .getOrgRepos(req.org)
+        .also { logRepos(req, it) }
+        .bodyList()
+
+    var allUsers = emptyList<User>()
+    for ((index, repo) in repos.withIndex()) {
+        val users = service.getRepoContributors(req.org, repo.name)
+            .also { logUsers(repo, it) }
+            .bodyList()
+
+        allUsers = (allUsers + users).aggregate()
+        updateResults(allUsers, index == repos.lastIndex)
+    }
+}
+
+launch(Dispatchers.Default) {
+    loadContributorsProgress(service, req) { users, completed ->
+        withContext(Dispatchers.Main) {
+            updateResults(users, startTime, completed)
+        }
+    }
+}
+```
+
+- `updateResults()` : aggregate 중간마다 UI에 표시
+    - `suspend` function으로 선언된 파라미터
+    - `withContext` : lamda 블록을 다른 context (`loadContributorsProgress`) 에서 실행
+
+#### Consecutive vs concurrent
+
+![img_6.png](img_6.png)
+
+- Consecutive (sequential) : repo를 순차적으로 접근해서 aggregate
+- 동기화 필요 없음
+
+![img_7.png](img_7.png)
+
+- Concurrent : repo를 순차적으로 접근하지만, aggregate를 concurrent하게 실행
+- 동기화 필요 (synchronization)
+    - 동기화 작업 : `updateResults()` 내부에서 수행
+
 ### Channels
 
 ### Testing coroutines
