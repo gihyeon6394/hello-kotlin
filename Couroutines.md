@@ -757,6 +757,135 @@ launch(Dispatchers.Default) {
 
 ### Channels
 
+![img_8.png](img_8.png)
+
+- 코루틴 간에 데이터를 통신(전달) 하는 방법
+- 코루틴 하나가 채널로 정보를 보내면, 다른 하나가 받을 수 있음
+
+![img_9.png](img_9.png)
+
+- producer-consumer 패턴 가능
+- N개의 코루틴이 같은 채널을 통해 데이터를 받을 때, 채널로부터 데이터가 처리된 (consume) 즉시 el은 채널에서 제거됨
+- **suspend** `send()`, `receive()` 함수를 사용하여 채널을 통해 데이터를 보내고 받음
+- 채널의 크기는 유한할때, 채널의 크기가 가득 차면 `send()` 함수는 suspended 됨
+
+```kotlin
+interface SendChannel<in E> {
+    suspend fun send(element: E)
+    fun close(): Boolean
+}
+
+interface ReceiveChannel<out E> {
+    suspend fun receive(): E
+}
+
+interface Channel<E> : SendChannel<E>, ReceiveChannel<E>
+```
+
+- `Channel`의 세가지 인터페이스
+    - `SendChannel` : 데이터를 보내는 채널
+    - `ReceiveChannel` : 데이터를 받는 채널
+    - `Channel` : 데이터를 보내고 받는 채널
+
+![img_10.png](img_10.png)
+
+- Unlimited channel : 큐와 가장 비슷
+- 프로듀서가 무한정으로 채널에 데이터를 보낼 수 있음
+- `send()` 는 suspended 되지 않음
+- 빈 채널에 `receive()` 를 호출하면 suspended 됨
+
+![img_11.png](img_11.png)
+
+- Buffer channel : 크기가 유한한 채널
+- 채널이 가득 차면 `send()` 는 suspended 됨
+
+![img_12.png](img_12.png)
+
+- Rendezvous channel : 크기가 0인 채널
+- `send()`, `receive()` 는 항상 suspended 됨 (둘 다 준비될 때까지)
+
+- Conflated channel : 가장 최근에 보낸 데이터만 유지
+- `send()` 시 채널이 가득 차면, 가장 최근에 보낸 데이터로 채널을 덮어씀 (suspend 되지 않음)
+- `receive()` 는 항상 가장 최근에 보낸 데이터를 받음
+
+```kotlin
+val rendezvousChannel = Channel<String>() // Rendezvous channel (default)
+val bufferedChannel = Channel<String>(10) // Buffered channel with buffer size 10
+val conflatedChannel = Channel<String>(CONFLATED) // Conflated channel
+val unlimitedChannel = Channel<String>(UNLIMITED) // Unlimited channel
+```
+
+```kotlin
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+
+fun main() = runBlocking<Unit> {
+    val channel = Channel<String>()
+    launch {
+        channel.send("A1")
+        channel.send("A2")
+        log("A done")
+    }
+
+    launch {
+        channel.send("B1")
+        log("B done")
+    }
+
+    launch {
+        repeat(3) {
+            log(channel.receive())
+        }
+    }
+}
+
+
+fun log(msg: String) = println("[${Thread.currentThread().name}] $msg")
+```
+
+````
+[main] A1
+[main] B1
+[main] A done
+[main] B done
+[main] A2
+
+Process finished with exit code 0
+````
+
+
+````kotlin
+suspend fun loadContributorsChannels(
+    service: GitHubService,
+    req: RequestData,
+    updateResults: suspend (List<User>, completed: Boolean) -> Unit,
+) {
+    coroutineScope {
+        val repos = service
+            .getOrgRepos(req.org)
+            .also { logRepos(req, it) }
+            .bodyList()
+
+        val channel = Channel<List<User>>()
+        for (repo in repos) {
+            launch {
+                val users = service.getRepoContributors(req.org, repo.name)
+                    .also { logUsers(repo, it) }
+                    .bodyList()
+                channel.send(users) // send data to the channel
+            }
+        }
+        var allUsers = emptyList<User>()
+        repeat(repos.size) {
+            val users = channel.receive()
+            allUsers = (allUsers + users).aggregate()
+            updateResults(allUsers, it == repos.lastIndex)
+        }
+    }
+}
+````
+
 ### Testing coroutines
 
 ## Composing suspending functions
