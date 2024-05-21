@@ -854,7 +854,6 @@ fun log(msg: String) = println("[${Thread.currentThread().name}] $msg")
 Process finished with exit code 0
 ````
 
-
 ````kotlin
 suspend fun loadContributorsChannels(
     service: GitHubService,
@@ -887,6 +886,116 @@ suspend fun loadContributorsChannels(
 ````
 
 ### Testing coroutines
+
+- 실행시간을 직접 측정하면 machine 준비시간 등이 합쳐져 부정확함
+- test dispatcher 사용해서 virtual time을 측정
+- `runTest` : test dispatcher를 사용하여 코루틴을 실행 (`runBlocking`과 비슷)
+- test dispatcher에서 `delay` 하면 즉시 리턴하고 virtual time을 증가시킴
+
+![img_14.png](img_14.png)
+
+````kotlin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.currentTime
+import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
+
+class TestingCoroutines {
+    @Test
+    fun testDelayInSuspend() = runTest {
+        val realStartTime = System.currentTimeMillis()
+        val virtualStartTime = currentTime
+
+        foo()
+        println("${System.currentTimeMillis() - realStartTime} ms") // ~ 6 ms
+        println("${currentTime - virtualStartTime} ms")             // 1000 ms
+    }
+
+    suspend fun foo() {
+        delay(1000)    // auto-advances without delay
+        println("foo") // executes eagerly when foo() is called
+    }
+
+}
+
+````
+
+````
+foo
+0 ms
+1000 ms
+
+Process finished with exit code 0
+````
+
+```kotlin
+@Test
+fun testDelayInLaunch() = runTest {
+        val realStartTime = System.currentTimeMillis()
+        val virtualStartTime = currentTime
+
+        bar()
+
+        println("${System.currentTimeMillis() - realStartTime} ms") // ~ 11 ms
+        println("${currentTime - virtualStartTime} ms")             // 1000 ms
+    }
+
+suspend fun bar() = coroutineScope {
+    launch {
+        delay(1000)    // auto-advances without delay
+        println("bar") // executes eagerly when bar() is called
+    }
+}
+```
+
+````
+bar
+1 ms
+1000 ms
+
+Process finished with exit code 0
+````
+
+- `delay` 가 있음에도 불구하고, 실제 실행시간이 delay 되지 않음
+
+```kotlin
+
+@Test
+fun test() = runTest {
+    val startTime = currentTime
+    // action
+    val totalTime = currentTime - startTime
+    // testing result
+}
+
+
+fun testConcurrent() = runTest {
+    val startTime = currentTime
+    val result = loadContributorsConcurrent(MockGithubService, testRequestData)
+    Assert.assertEquals("Wrong result for 'loadContributorsConcurrent'", expectedConcurrentResults.users, result)
+    val totalTime = currentTime - startTime
+
+    Assert.assertEquals(
+        "The calls run concurrently, so the total virtual time should be 2200 ms: " +
+                "1000 for repos request plus max(1000, 1200, 800) = 1200 for concurrent contributors requests)",
+        expectedConcurrentResults.timeFromStart, totalTime
+    )
+}
+
+fun testChannels() = runTest {
+    val startTime = currentTime
+    var index = 0
+    loadContributorsChannels(MockGithubService, testRequestData) { users, _ ->
+        val expected = concurrentProgressResults[index++]
+        val time = currentTime - startTime
+        Assert.assertEquals(
+            "Expected intermediate results after ${expected.timeFromStart} ms:",
+            expected.timeFromStart, time
+        )
+        Assert.assertEquals("Wrong intermediate results after $time:", expected.users, users)
+    }
+}
+```
 
 ## Composing suspending functions
 
