@@ -2,6 +2,7 @@
 
 - Coroutines basics
 - Coroutines and channels-tutorial
+- Cancellation and timeouts
 - Composing suspending functions
 - Coroutine context and dispatchers
 - Asynchronous Flow
@@ -996,6 +997,36 @@ fun testChannels() = runTest {
     }
 }
 ```
+
+## Cancellation and timeouts
+
+### Cancelling coroutine execution
+
+- 코루틴을 취소할 니즈가 있음 (유저가 UI를 닫았는데, 코루틴이 계속 실행되는 경우)
+
+````kotlin
+val job = launch {
+    repeat(1000) { i ->
+        println("job: I'm sleeping $i ...")
+        delay(500L)
+    }
+}
+delay(1300L) // delay a bit
+println("main: I'm tired of waiting!")
+job.cancel() // cancels the job
+job.join() // waits for job's completion 
+println("main: Now I can quit.")
+````
+
+````
+job: I'm sleeping 0 ...
+job: I'm sleeping 1 ...
+job: I'm sleeping 2 ...
+main: I'm tired of waiting!
+main: Now I can quit.
+````
+
+- `launch` 가 반환하는 `Job`을 사용하여 코루틴을 취소
 
 ## Composing suspending functions
 
