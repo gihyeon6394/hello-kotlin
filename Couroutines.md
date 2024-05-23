@@ -1155,6 +1155,42 @@ job: I'm running finally
 main: Now I can quit.
 ````
 
+### Run non-cancellable block
+
+- `withContext(NonCancellable)` : 취소 불가능한 블록을 실행
+- 아주 드문 케이스로 취소 불가능한 블록을 실행해야할때 사용
+
+```kotlin
+val job = launch {
+    try {
+        repeat(1000) { i ->
+            println("job: I'm sleeping $i ...")
+            delay(500L)
+        }
+    } finally {
+        withContext(NonCancellable) {
+            println("job: I'm running finally")
+            delay(1000L)
+            println("job: And I've just delayed for 1 sec because I'm non-cancellable")
+        }
+    }
+}
+delay(1300L) // delay a bit
+println("main: I'm tired of waiting!")
+job.cancelAndJoin() // cancels the job and waits for its completion
+println("main: Now I can quit.")
+```
+
+```
+job: I'm sleeping 0 ...
+job: I'm sleeping 1 ...
+job: I'm sleeping 2 ...
+main: I'm tired of waiting!
+job: I'm running finally
+job: And I've just delayed for 1 sec because I'm non-cancellable
+main: Now I can quit.
+```
+
 ## Composing suspending functions
 
 ## Coroutine context and dispatchers
