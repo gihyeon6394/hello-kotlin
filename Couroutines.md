@@ -1028,6 +1028,66 @@ main: Now I can quit.
 
 - `launch` 가 반환하는 `Job`을 사용하여 코루틴을 취소
 
+### Cancellation is cooperative
+
+- 코루틴은 cooperative하게 취소됨
+- `kotlinx.coroutines` 의 모든 suspeding function은 취소 가능
+- 코루틴 취소를 체크하다 `CancellationException`을 던지고, 취소시킴
+- 코루틴 연산을 하고있어서, 취소 체크를 안하고 있다면 취소 불가능
+
+````kotlin
+val startTime = System.currentTimeMillis()
+val job = launch(Dispatchers.Default) {
+    var nextPrintTime = startTime
+    var i = 0
+    while (i < 5) { // computation loop, just wastes CPU
+        // print a message twice a second
+        if (System.currentTimeMillis() >= nextPrintTime) {
+            println("job: I'm sleeping ${i++} ...")
+            nextPrintTime += 500L
+        }
+    }
+}
+delay(1300L) // delay a bit
+println("main: I'm tired of waiting!")
+job.cancelAndJoin() // cancels the job and waits for its completion
+println("main: Now I can quit.")
+````
+
+````
+job: I'm sleeping 0 ...
+job: I'm sleeping 1 ...
+job: I'm sleeping 2 ...
+main: I'm tired of waiting!
+job: I'm sleeping 3 ...
+job: I'm sleeping 4 ...
+main: Now I can quit.
+````
+
+- `job.cancelAndJoin()` : `cancel()`과 `join()`을 합친 함수
+- "I'm sleeping" 일때 취소가 불가능함
+
+```kotlin
+val job = launch(Dispatchers.Default) {
+  repeat(5) { i ->
+    try {
+      // print a message twice a second
+      println("job: I'm sleeping $i ...")
+      delay(500)
+    } catch (e: Exception) {
+      // log the exception
+      println(e)
+    }
+  }
+}
+delay(1300L) // delay a bit
+println("main: I'm tired of waiting!")
+job.cancelAndJoin() // cancels the job and waits for its completion
+println("main: Now I can quit.")
+```
+
+- `try-catch` 블록을 사용하여 `CancellationException`을 catch하면서 취소가 불가능해짐
+
 ## Composing suspending functions
 
 ## Coroutine context and dispatchers
