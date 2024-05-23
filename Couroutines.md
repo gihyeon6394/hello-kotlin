@@ -1239,6 +1239,70 @@ I'm sleeping 2 ...
 Result is null
 ````
 
+### Asynchronous timeout and resources
+
+- `withTimeout` 을 사용했고, 블록 내에서 리소스를 사용하는 경우 블록 밖에서 리소스를 해제
+- 아래 코드에서 리소스 누수는 없음
+
+```kotlin
+var acquired = 0
+
+class Resource {
+    init {
+        acquired++
+    } // Acquire the resource
+
+    fun close() {
+        acquired--
+    } // Release the resource
+}
+
+fun main() {
+    runBlocking {
+        repeat(10_000) { // Launch 10K coroutines
+            launch {
+                val resource = withTimeout(60) { // Timeout of 60 ms
+                    delay(50) // Delay for 50 ms
+                    Resource() // Acquire a resource and return it from withTimeout block     
+                }
+                resource.close() // Release the resource
+            }
+        }
+    }
+    // Outside of runBlocking all coroutines have completed
+    println(acquired) // Print the number of resources still acquired
+}
+```
+
+```
+0
+```
+
+````kotlin
+runBlocking {
+    repeat(10_000) { // Launch 10K coroutines
+        launch {
+            var resource: Resource? = null // Not acquired yet
+            try {
+                withTimeout(60) { // Timeout of 60 ms
+                    delay(50) // Delay for 50 ms
+                    resource = Resource() // Store a resource to the variable if acquired      
+                }
+                // We can do something else with the resource here
+            } finally {
+                resource?.close() // Release the resource if it was acquired
+            }
+        }
+    }
+}
+// Outside of runBlocking all coroutines have completed
+println(acquired) // Print the number of resources still acquired
+````
+
+```
+0
+```
+
 ## Composing suspending functions
 
 ## Coroutine context and dispatchers
