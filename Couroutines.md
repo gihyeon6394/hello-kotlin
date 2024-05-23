@@ -1191,6 +1191,54 @@ job: And I've just delayed for 1 sec because I'm non-cancellable
 main: Now I can quit.
 ```
 
+### Timeout
+
+- 실무에서 코루틴을 취소해야하는 이유 중 가장 큰 부분
+- 코루틴의 실행이 특정 시간을 초과하면 취소
+- `withTimeout` : 특정 시간을 초과하면 `TimeoutCancellationException`을 던짐
+    - `TimeoutCancellationException` 은 `CancellationException`의 하위 클래스
+    - `CancellationException`은 보통 완료로 처리하지만, `withTimeout` 안에서는 예외로 처리
+- `withTimeoutOrNull` : `TimeoutCancellationException`을 던지지 않고 `null`을 반환
+
+```kotlin
+withTimeout(1300L) {
+    repeat(1000) { i ->
+        println("I'm sleeping $i ...")
+        delay(500L)
+    }
+}
+```
+
+````
+'m sleeping 0 ...
+I'm sleeping 1 ...
+I'm sleeping 2 ...
+Exception in thread "main" kotlinx.coroutines.TimeoutCancellationException: Timed out waiting for 1300 ms
+ at _COROUTINE._BOUNDARY._ (CoroutineDebugging.kt:46) 
+ at FileKt$main$1$1.invokeSuspend (File.kt:-1) 
+ at FileKt$main$1.invokeSuspend (File.kt:-1) 
+Caused by: kotlinx.coroutines.TimeoutCancellationException: Timed out waiting for 1300 ms
+at kotlinx.coroutines.TimeoutKt .TimeoutCancellationException(Timeout.kt:191)
+````
+
+````kotlin
+val result = withTimeoutOrNull(1300L) {
+    repeat(1000) { i ->
+        println("I'm sleeping $i ...")
+        delay(500L)
+    }
+    "Done" // will get cancelled before it produces this result
+}
+println("Result is $result")
+````
+
+````
+I'm sleeping 0 ...
+I'm sleeping 1 ...
+I'm sleeping 2 ...
+Result is null
+````
+
 ## Composing suspending functions
 
 ## Coroutine context and dispatchers
