@@ -1114,7 +1114,46 @@ job.cancelAndJoin() // cancels the job and waits for its completion
 println("main: Now I can quit.")
 ```
 
+````
+job: I'm sleeping 0 ...
+job: I'm sleeping 1 ...
+job: I'm sleeping 2 ...
+main: I'm tired of waiting!
+main: Now I can quit.
+````
+
 - `isActive` : `CoroutineScope`의 확장 프로퍼티
+
+### Closing resources with finally
+
+- suspending funciton은 취소되었을때 `CancellationException`을 던짐
+- `finally` 블록을 사용하여 취소되었을때 리소스를 해제
+
+```kotlin
+val job = launch {
+    try {
+        repeat(1000) { i ->
+            println("job: I'm sleeping $i ...")
+            delay(500L)
+        }
+    } finally {
+        println("job: I'm running finally")
+    }
+}
+delay(1300L) // delay a bit
+println("main: I'm tired of waiting!")
+job.cancelAndJoin() // cancels the job and waits for its completion
+println("main: Now I can quit.")
+````
+
+````
+job: I'm sleeping 0 ...
+job: I'm sleeping 1 ...
+job: I'm sleeping 2 ...
+main: I'm tired of waiting!
+job: I'm running finally
+main: Now I can quit.
+````
 
 ## Composing suspending functions
 
