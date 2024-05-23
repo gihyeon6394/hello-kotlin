@@ -1069,16 +1069,16 @@ main: Now I can quit.
 
 ```kotlin
 val job = launch(Dispatchers.Default) {
-  repeat(5) { i ->
-    try {
-      // print a message twice a second
-      println("job: I'm sleeping $i ...")
-      delay(500)
-    } catch (e: Exception) {
-      // log the exception
-      println(e)
+    repeat(5) { i ->
+        try {
+            // print a message twice a second
+            println("job: I'm sleeping $i ...")
+            delay(500)
+        } catch (e: Exception) {
+            // log the exception
+            println(e)
+        }
     }
-  }
 }
 delay(1300L) // delay a bit
 println("main: I'm tired of waiting!")
@@ -1087,6 +1087,34 @@ println("main: Now I can quit.")
 ```
 
 - `try-catch` 블록을 사용하여 `CancellationException`을 catch하면서 취소가 불가능해짐
+
+### Making computation code cancellable
+
+- 취소 가능한 코드를 작성하는 방법
+- 방법 1. 주기적으로 cancellation check
+    - `yield()` 를 활용
+- 방법 2. 명시적으로 취소 상태를 확인
+
+```kotlin
+val startTime = System.currentTimeMillis()
+val job = launch(Dispatchers.Default) {
+    var nextPrintTime = startTime
+    var i = 0
+    while (isActive) { // cancellable computation loop
+        // print a message twice a second
+        if (System.currentTimeMillis() >= nextPrintTime) {
+            println("job: I'm sleeping ${i++} ...")
+            nextPrintTime += 500L
+        }
+    }
+}
+delay(1300L) // delay a bit
+println("main: I'm tired of waiting!")
+job.cancelAndJoin() // cancels the job and waits for its completion
+println("main: Now I can quit.")
+```
+
+- `isActive` : `CoroutineScope`의 확장 프로퍼티
 
 ## Composing suspending functions
 
