@@ -1361,6 +1361,30 @@ The answer is 42
 Completed in 1017 ms
 ````
 
+### Lazily started async
+
+- `async`는 `start` 파라미터를 가짐
+- `start` : `CoroutineStart` 타입
+    - `DEFAULT` : 즉시 시작
+    - `LAZY` : `Deferred`를 반환하고, `Deferred.await()` 호출 혹은 `Job.start()` 호출시 시작
+
+```kotlin
+val time = measureTimeMillis {
+    val one = async(start = CoroutineStart.LAZY) { doSomethingUsefulOne() }
+    val two = async(start = CoroutineStart.LAZY) { doSomethingUsefulTwo() }
+    // some computation
+    one.start() // start the first one
+    two.start() // start the second one
+    println("The answer is ${one.await() + two.await()}")
+}
+println("Completed in $time ms")
+```
+
+````
+The answer is 42
+Completed in 1017 ms
+````
+
 ## Coroutine context and dispatchers
 
 ## Asynchronous Flow
