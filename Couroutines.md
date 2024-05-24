@@ -1430,6 +1430,67 @@ fun main() {
 - `runBlocking`을 사용하여 결과를 기다림
 - 즉 메인스레드가 `runBlocking`을 사용하여 blocking 되어 백그라운드 작업이 완료될때까지 기다림 (Structured Concurrency에서는 발생하지 않음)
 
+### Structured concurrency with async
+
+- 비동기를 활용한 동시성 예시
+- `doSomethingUsefulOne`, `doSomethingUsefulTwo` 를 동시에 실행하고, 결과를 합침
+
+```kotlin
+suspend fun concurrentSum(): Int = coroutineScope {
+    val one = async { doSomethingUsefulOne() }
+    val two = async { doSomethingUsefulTwo() }
+    one.await() + two.await()
+}
+
+fun main() {
+  val time = measureTimeMillis {
+    println("The answer is ${concurrentSum()}")
+  }
+  println("Completed in $time ms")
+}
+```
+
+````
+The answer is 42
+Completed in 1017 ms
+````
+
+#### cancelling 전파
+
+```kotlin
+import kotlinx.coroutines.*
+
+fun main() = runBlocking<Unit> {
+    try {
+        failedConcurrentSum()
+    } catch (e: ArithmeticException) {
+        println("Computation failed with ArithmeticException")
+    }
+}
+
+suspend fun failedConcurrentSum(): Int = coroutineScope {
+    val one = async<Int> {
+        try {
+            delay(Long.MAX_VALUE) // Emulates very long computation
+            42
+        } finally {
+            println("First child was cancelled")
+        }
+    }
+    val two = async<Int> {
+        println("Second child throws an exception")
+        throw ArithmeticException()
+    }
+    one.await() + two.await()
+}
+```
+
+````
+Second child throws an exception
+First child was cancelled
+Computation failed with ArithmeticException
+````
+
 ## Coroutine context and dispatchers
 
 ## Asynchronous Flow
