@@ -1305,6 +1305,38 @@ println(acquired) // Print the number of resources still acquired
 
 ## Composing suspending functions
 
+suspending function을 조합하는 여러 방법
+
+### Sequential by default
+
+```kotlin
+suspend fun doSomethingUsefulOne(): Int {
+    delay(1000L) // pretend we are doing something useful here
+    return 13
+}
+
+suspend fun doSomethingUsefulTwo(): Int {
+    delay(1000L) // pretend we are doing something useful here, too
+    return 29
+}
+
+fun main() {
+    val time = measureTimeMillis {
+        val one = doSomethingUsefulOne()
+        val two = doSomethingUsefulTwo()
+        println("The answer is ${one + two}")
+    }
+    println("Completed in $time ms")
+}
+```
+
+````
+The answer is 42
+Completed in 2017 ms
+````
+
+- 코루틴의 코드는 기본적으로 regular code처럼 sequential하게 실행됨
+
 ## Coroutine context and dispatchers
 
 ## Asynchronous Flow
