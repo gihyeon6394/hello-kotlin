@@ -1385,6 +1385,51 @@ The answer is 42
 Completed in 1017 ms
 ````
 
+### Async-style functions
+
+> 프로그래밍 언어에서 비동기 스타일 함수는 인기가 많으나, 코루틴에서는 비추
+
+- `GlobalScope`을 사용하는 `async` 코투린 빌더로 비동기 스타일 함수를 만들 수 있음
+- structured concurrency를 위반하고, 취소가 어려움
+
+````kotlin
+// The result type of somethingUsefulOneAsync is Deferred<Int>
+@OptIn(DelicateCoroutinesApi::class)
+fun somethingUsefulOneAsync() = GlobalScope.async {
+        doSomethingUsefulOne()
+    }
+
+// The result type of somethingUsefulTwoAsync is Deferred<Int>
+@OptIn(DelicateCoroutinesApi::class)
+fun somethingUsefulTwoAsync() = GlobalScope.async {
+    doSomethingUsefulTwo()
+}
+````
+
+- `xxxAsync` 은 suspending function이 아님
+- 어디서나 비동기로 호출 가능
+
+````kotlin
+// note that we don't have `runBlocking` to the right of `main` in this example
+fun main() {
+    val time = measureTimeMillis {
+        // we can initiate async actions outside of a coroutine
+        val one = somethingUsefulOneAsync()
+        val two = somethingUsefulTwoAsync()
+        // but waiting for a result must involve either suspending or blocking.
+        // here we use `runBlocking { ... }` to block the main thread while waiting for the result
+        runBlocking {
+            println("The answer is ${one.await() + two.await()}")
+        }
+    }
+    println("Completed in $time ms")
+}
+````
+
+- `somethingUsefulOneAsync` 를 실행한 메인 스레드가 백그라운드로 `doSomethingUsefulOne`을 실행
+- `runBlocking`을 사용하여 결과를 기다림
+- 즉 메인스레드가 `runBlocking`을 사용하여 blocking 되어 백그라운드 작업이 완료될때까지 기다림 (Structured Concurrency에서는 발생하지 않음)
+
 ## Coroutine context and dispatchers
 
 ## Asynchronous Flow
