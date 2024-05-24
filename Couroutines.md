@@ -1337,6 +1337,30 @@ Completed in 2017 ms
 
 - 코루틴의 코드는 기본적으로 regular code처럼 sequential하게 실행됨
 
+### Concurrent using async
+
+- 각 suspending function을 `async`로 감싸면 concurrent하게 실행됨
+- `async` : `launch`와 비슷
+    - `launch` : 결과를 반환하지 않음
+    - `async` : 결과 `Deferred`를 반환
+- `Deferred` : light-weight non-blocking future
+    - `Deferred.await()` : 결과를 반환
+    - `Job` 처럼 필요시 cancel 가능
+
+```kotlin
+val time = measureTimeMillis {
+    val one = async { doSomethingUsefulOne() }
+    val two = async { doSomethingUsefulTwo() }
+    println("The answer is ${one.await() + two.await()}")
+}
+println("Completed in $time ms")
+```
+
+````
+The answer is 42
+Completed in 1017 ms
+````
+
 ## Coroutine context and dispatchers
 
 ## Asynchronous Flow
