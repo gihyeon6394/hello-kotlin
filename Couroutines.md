@@ -1443,10 +1443,10 @@ suspend fun concurrentSum(): Int = coroutineScope {
 }
 
 fun main() {
-  val time = measureTimeMillis {
-    println("The answer is ${concurrentSum()}")
-  }
-  println("Completed in $time ms")
+    val time = measureTimeMillis {
+        println("The answer is ${concurrentSum()}")
+    }
+    println("Completed in $time ms")
 }
 ```
 
@@ -1492,6 +1492,48 @@ Computation failed with ArithmeticException
 ````
 
 ## Coroutine context and dispatchers
+
+- 코루틴은 항상 실행되는 context (`CoroutineContext`)를 가짐
+- `CoroutineContext` : 여러 요소를 가짐
+    - `Job` : 코루틴의 lifecycle을 관리
+    - `CoroutineDispatcher` : 코루틴을 실행할 스레드를 지정
+    - `CoroutineName` : 코루틴의 이름
+    - `CoroutineExceptionHandler` : 코루틴에서 발생한 예외를 처리
+
+### Dispatchers and threads
+
+- **coroutine dispatcher** (`CoroutineDispatcher`) : 코루틴을 실행할 스레드를 지정
+    - 스레드 풀에 디스패치
+- 모든 코루틴 빌더 (`launch`, `asynce`, ..)는 `CoroutineContext`를 받음 (optional)
+
+```kotlin
+launch { // context of the parent, main runBlocking coroutine
+    println("main runBlocking      : I'm working in thread ${Thread.currentThread().name}")
+}
+launch(Dispatchers.Unconfined) { // not confined -- will work with main thread
+    println("Unconfined            : I'm working in thread ${Thread.currentThread().name}")
+}
+launch(Dispatchers.Default) { // will get dispatched to DefaultDispatcher 
+    println("Default               : I'm working in thread ${Thread.currentThread().name}")
+}
+launch(newSingleThreadContext("MyOwnThread")) { // will get its own new thread
+    println("newSingleThreadContext: I'm working in thread ${Thread.currentThread().name}")
+}
+```
+
+````
+main runBlocking      : I'm working in thread main
+Unconfined            : I'm working in thread main
+Default               : I'm working in thread DefaultDispatcher-worker-1
+newSingleThreadContext: I'm working in thread MyOwnThread
+````
+
+- 파라미터 없는 `launch` : 부모 코루틴의 context를 상속
+    - main runBlocking coroutine의 context를 상속
+- `Dispatchers.Unconfined` : 부모 코루틴의 context를 상속하지 않음
+    - main thread에서 실행
+- `Dispatchers.Default` : 공유 백그라운드 스레드 풀에서 실행
+- `newSingleThreadContext` : 새로운 스레드를 생성
 
 ## Asynchronous Flow
 
