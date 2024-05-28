@@ -1535,6 +1535,37 @@ newSingleThreadContext: I'm working in thread MyOwnThread
 - `Dispatchers.Default` : 공유 백그라운드 스레드 풀에서 실행
 - `newSingleThreadContext` : 새로운 스레드를 생성
 
+### Unconfined vs confined dispatcher
+
+- `Dispathcers.Unconfined` : 코루틴이 시작되는 스레드에서 실행
+    - 첫번쨰 suspension point에서 다른 스레드로 전환됨
+    - 중지되면, suspending function을 호출한 스레드에서 재개
+    - 적합 : CPU 시간을 많이 소모하지 않고, 공유 데이터를 변경하지 않는 경우
+    - 자주 사용되지 않음
+- `Dispatchers.Default` : 바깥 `CoroutineScope`의 context를 상속
+    - `runBlocking` 하면 호출한 thread에서만 실행됨
+    - FIFO 스케줄링
+
+````kotlin
+launch(Dispatchers.Unconfined) { // not confined -- will work with main thread
+    println("Unconfined      : I'm working in thread ${Thread.currentThread().name}")
+    delay(500)
+    println("Unconfined      : After delay in thread ${Thread.currentThread().name}")
+}
+launch { // context of the parent, main runBlocking coroutine
+    println("main runBlocking: I'm working in thread ${Thread.currentThread().name}")
+    delay(1000)
+    println("main runBlocking: After delay in thread ${Thread.currentThread().name}")
+}
+````
+
+````
+Unconfined      : I'm working in thread main
+main runBlocking: I'm working in thread main
+Unconfined      : After delay in thread kotlinx.coroutines.DefaultExecutor
+main runBlocking: After delay in thread main
+````
+
 ## Asynchronous Flow
 
 ## Channels
