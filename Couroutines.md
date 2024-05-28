@@ -1566,6 +1566,46 @@ Unconfined      : After delay in thread kotlinx.coroutines.DefaultExecutor
 main runBlocking: After delay in thread main
 ````
 
+### Debugging coroutines and threads
+
+- 코루틴은 스레드 에서 중지되어 다른 스레드에서 재개 가능
+- 싱글스레드 디스패처여도, 어떤 코루틴이 뭘하고 있는지 파악하기 힘듦
+
+#### Debugging with IDEA
+
+![img_15.png](img_15.png)
+
+- Debug 툴의 Coroutines 탭 사용
+- 코루틴 state 확인
+- 각 코루틴의 로컬 변수, 변수 값 확인
+- 코루틴 stack trace 확인
+- Coroutines Dump : 코루틴의 상태를 파일로 저장
+
+#### Debugging using logging
+
+- logging framework을 사용하여 코루틴의 상태를 로깅
+
+````kotlin
+// run with JVM option -Dkotlinx.coroutines.debug
+val a = async {
+    log("I'm computing a piece of the answer")
+    6
+}
+val b = async {
+    log("I'm computing another piece of the answer")
+    7
+}
+log("The answer is ${a.await() * b.await()}")
+
+fun log(msg: String) = println("[${Thread.currentThread().name}] $msg")
+````
+
+````
+[main @coroutine#2] I'm computing a piece of the answer
+[main @coroutine#3] I'm computing another piece of the answer
+[main @coroutine#1] The answer is 42
+````
+
 ## Asynchronous Flow
 
 ## Channels
