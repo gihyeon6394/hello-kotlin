@@ -1606,6 +1606,37 @@ fun log(msg: String) = println("[${Thread.currentThread().name}] $msg")
 [main @coroutine#1] The answer is 42
 ````
 
+### Jumping between threads
+
+````kotlin
+import kotlinx.coroutines.newSingleThreadContext
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+
+
+fun main() {
+    newSingleThreadContext("Ctx1").use { ctx1 ->
+        newSingleThreadContext("Ctx2").use { ctx2 ->
+            runBlocking(ctx1) { // context 명시
+                log("Started in ctx1")
+                withContext(ctx2) { // context 변경
+                    log("Working in ctx2")
+                }
+                log("Back to ctx1")
+            }
+        }
+    }
+}
+````
+
+````
+[Ctx1 @coroutine#1] Started in ctx1
+[Ctx2 @coroutine#1] Working in ctx2
+[Ctx1 @coroutine#1] Back to ctx1
+````
+
+- `newSingleThreadContext` : 새로운 스레드를 생성하고 `use` 블록이 끝나면 스레드를 release
+
 ## Asynchronous Flow
 
 ## Channels
