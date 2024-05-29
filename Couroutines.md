@@ -1637,6 +1637,34 @@ fun main() {
 
 - `newSingleThreadContext` : 새로운 스레드를 생성하고 `use` 블록이 끝나면 스레드를 release
 
+### Job in the context
+
+- `Job`은 context의 일부
+- `coroutineCOntext[Job]` 표현식으로 `Job`을 얻을 수 있음
+
+````kotlin
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.newSingleThreadContext
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+
+
+fun main() {
+    newSingleThreadContext("Ctx1").use { ctx1 ->
+        newSingleThreadContext("Ctx2").use { ctx2 ->
+            runBlocking(ctx1) {
+                log("Started in ctx1")
+                println("My job is ${coroutineContext[Job]}") // My job is "coroutine#1":BlockingCoroutine{Active}@7103734e
+                withContext(ctx2) {
+                    log("Working in ctx2")
+                }
+                log("Back to ctx1")
+            }
+        }
+    }
+}
+````
+
 ## Asynchronous Flow
 
 ## Channels
