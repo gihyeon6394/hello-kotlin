@@ -1665,6 +1665,46 @@ fun main() {
 }
 ````
 
+### Children of a coroutine
+
+- `CoroutineScope`으로 코루틴을 시작할때, `CoroutineScope.coroutineContext`에 `Job`이 포함됨
+- 부모 코루틴의 `Job`은 자식 코루틴의 `Job`을 포함
+- 코루틴이 취소되면 자식 코루틴도 취소됨
+- 명시적으로 부모-자식 관계를 무시(취소)하는 방법
+    - 방법 1. 서로 다른 scope을 코루틴 런치 시 사용 (e.g. `GlobalScope.launch`)
+    - 방법 2. 코루틴 런치시 context 파라미터로 다른 `Job` 오브젝트 사용
+        - 해당 `Job` 의 부모를 상속받음
+
+```kotlin
+// launch a coroutine to process some kind of incoming request
+val request = launch {
+    // it spawns two other jobs
+    launch(Job()) {
+        println("job1: I run in my own Job and execute independently!")
+        delay(1000)
+        println("job1: I am not affected by cancellation of the request")
+    }
+    // and the other inherits the parent context
+    launch {
+        delay(100)
+        println("job2: I am a child of the request coroutine")
+        delay(1000)
+        println("job2: I will not execute this line if my parent request is cancelled")
+    }
+}
+delay(500)
+request.cancel() // cancel processing of the request
+println("main: Who has survived request cancellation?")
+delay(1000) // delay the main thread for a second to see what happens
+```
+
+````
+job1: I run in my own Job and execute independently!
+job2: I am a child of the request coroutine
+main: Who has survived request cancellation?
+job1: I am not affected by cancellation of the request
+````
+
 ## Asynchronous Flow
 
 ## Channels
