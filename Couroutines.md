@@ -1733,6 +1733,34 @@ Coroutine 2 is done
 Now processing of the request is complete
 ````
 
+### Naming coroutines for debugging
+
+- `CoroutineName` : 코루틴의 이름을 지정
+- debugging mode에서 코루틴의 이름을 확인 가능
+
+````kotlin
+log("Started main coroutine")
+// run two background value computations
+val v1 = async(CoroutineName("v1coroutine")) {
+    delay(500)
+    log("Computing v1")
+    6
+}
+val v2 = async(CoroutineName("v2coroutine")) {
+    delay(1000)
+    log("Computing v2")
+    7
+}
+log("The answer for v1 * v2 = ${v1.await() * v2.await()}")
+````
+
+````
+[main @coroutine#7] Started main coroutine
+[main @v1coroutine#8] Computing v1
+[main @v2coroutine#9] Computing v2
+[main @coroutine#7] The answer for v1 * v2 = 42
+````
+
 ## Asynchronous Flow
 
 ## Channels
