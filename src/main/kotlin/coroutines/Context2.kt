@@ -49,4 +49,10 @@ fun main() {
         log("The answer for v1 * v2 = ${v1.await() * v2.await()}")
     }
 
+    runBlocking {
+        launch(Dispatchers.Default + CoroutineName("test")) {
+            println("I'm working in thread ${Thread.currentThread().name}")
+        }
+    }
+
 }

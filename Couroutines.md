@@ -1761,6 +1761,20 @@ log("The answer for v1 * v2 = ${v1.await() * v2.await()}")
 [main @coroutine#7] The answer for v1 * v2 = 42
 ````
 
+### Combining context elements
+
+- `+` 연산자로 `CoroutineContext`를 합칠 수 있음
+
+````kotlin
+launch(Dispatchers.Default + CoroutineName("test")) {
+    println("I'm working in thread ${Thread.currentThread().name}")
+}
+````
+
+````
+I'm working in thread DefaultDispatcher-worker-1 @test#11
+````
+
 ## Asynchronous Flow
 
 ## Channels
