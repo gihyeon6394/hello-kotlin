@@ -1775,6 +1775,80 @@ launch(Dispatchers.Default + CoroutineName("test")) {
 I'm working in thread DefaultDispatcher-worker-1 @test#11
 ````
 
+### Coroutine scope
+
+- `CoroutineScope` : 코루틴을 시작하고, 취소할 수 있는 scope
+- `CoroutineScope` 인스턴스는 `CoroutineScope()`, `MainScope()` 등으로 생성
+
+```kotlin
+class Activity {
+    private val mainScope = CoroutineScope(Dispatchers.Default)
+    fun destroy() {
+        mainScope.cancel()
+    }
+
+    fun doSomething() {
+        // launch ten coroutines for a demo, each working for a different time
+        repeat(10) { i ->
+            mainScope.launch {
+                delay((i + 1) * 200L) // variable delay 200ms, 400ms, ... etc
+                println("Coroutine $i is done")
+            }
+        }
+    }
+}
+
+
+fun main() = runBlocking {
+    val activity = Activity()
+    activity.doSomething() // run test function
+    println("Launched coroutines")
+    delay(500L) // delay for half a second
+    println("Destroying activity!")
+    activity.destroy() // cancels all coroutines
+    delay(1000) // visually confirm that they don't work
+}
+```
+
+#### Thread-local data
+
+- 코루틴 간에 스레드-로컬 데이터를 전달하는 방법
+- `ThreadLocal` : `asContextElement` 확장 함수를 사용하여 `CoroutineContext`에 추가
+    - 주어진 `ThreadLocal` 을 저장하고 코루틴이 실행될때 값을 복원
+- `ensuerPresent` : `ThreadLocal` 값이 존재하는지 확인
+- `ThreadLocal` 값이 변해도 새로운 값이 코루틴 호출자에게 전파되지 않음
+    - context element가 모든 ThreadLocal Object를 추적할 수 없기 때문
+    - 수정된 값은 다음 suspension point에서 유실됨
+    - `withContext`를 사용해 코루틴 변수 내에서 스레드 로컬 변수 값을 업데이트 할것
+
+```kotlin
+
+val threadLocal = ThreadLocal<String?>() // declare thread-local variable
+
+fun main() = runBlocking {
+    threadLocal.set("main")
+    println("Pre-main, current thread: ${Thread.currentThread()}, thread local value: '${threadLocal.get()}'")
+    val job = launch(Dispatchers.Default + threadLocal.asContextElement(value = "launch")) {
+        println("Launch start, current thread: ${Thread.currentThread()}, thread local value: '${threadLocal.get()}'")
+        yield()
+        println("After yield, current thread: ${Thread.currentThread()}, thread local value: '${threadLocal.get()}'")
+    }
+    job.join()
+    println("Post-main, current thread: ${Thread.currentThread()}, thread local value: '${threadLocal.get()}'")
+}
+```
+
+````
+Pre-main, current thread: Thread[main,5,main], thread local value: 'main'
+Launch start, current thread: Thread[DefaultDispatcher-worker-1,5,main], thread local value: 'launch'
+After yield, current thread: Thread[DefaultDispatcher-worker-1,5,main], thread local value: 'launch'
+Post-main, current thread: Thread[main,5,main], thread local value: 'main'
+````
+
+- 별도의 `Dispatchers.Default` 풀에서 코루틴 런치
+    - `threadLocal.asContextElement(value = "launch")` 로 `ThreadLocal` 값을 설정
+    - 해당 풀에서 어떤 코루틴이 실행되건 `ThreadLocal` 값이 유지됨
+
 ## Asynchronous Flow
 
 ## Channels
