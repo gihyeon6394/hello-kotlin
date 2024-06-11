@@ -1969,6 +1969,38 @@ Flow started
 3
 ````
 
+### Flow cancellation basics
+
+- Flow는 기본 cooperative cancellation을 지원
+- suspending funciton에서 `cancel`되면 flow는 취소된다. e.g. `delay`
+
+```kotlin
+import kotlinx.coroutines.withTimeoutOrNull
+
+fun simple(): Flow<Int> = flow {
+    for (i in 1..3) {
+        delay(100)
+        println("Emitting $i")
+        emit(i)
+    }
+}
+
+fun main() = runBlocking<Unit> {
+    withTimeoutOrNull(250) { // Timeout after 250ms 
+        simple().collect { value -> println(value) }
+    }
+    println("Done")
+}
+````
+
+````
+Emitting 1
+1
+Emitting 2
+2
+Done
+````
+
 ## Channels
 
 ## Coroutine exception handling

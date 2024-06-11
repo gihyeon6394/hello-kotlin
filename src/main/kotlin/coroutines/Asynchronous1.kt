@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * @author gihyeon-kim
@@ -38,6 +39,11 @@ fun main() = runBlocking {
     flow.collect { value -> println(value) }
     println("Calling collect again...")
     flow.collect { value -> println(value) }
+
+    withTimeoutOrNull(250) { // Timeout after 250ms
+        simple().collect { value -> println(value) }
+    }
+    println("Done")
 }
 
 fun simple(): Flow<Int> = flow {
