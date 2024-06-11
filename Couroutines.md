@@ -1930,6 +1930,45 @@ I'm not blocked 3
 3
 ````
 
+### Flows are cold
+
+- `Flow`는 cold stream (sequence 처럼)
+- cold stream : `collect` 함수가 호출되기 전까지 아무것도 하지 않음
+- `flow` 빌더 안의 코드들이 `collect` 함수가 호출될때 실행됨
+
+```kotlin
+fun simple(): Flow<Int> = flow {
+    println("Flow started")
+    for (i in 1..3) {
+        delay(100)
+        emit(i)
+    }
+}
+
+fun main() = runBlocking<Unit> {
+    println("Calling simple function...")
+    val flow = simple()
+    println("Calling collect...")
+    flow.collect { value -> println(value) }
+    println("Calling collect again...")
+    flow.collect { value -> println(value) }
+}
+```
+
+````
+Calling simple function...
+Calling collect...
+Flow started
+1
+2
+3
+Calling collect again...
+Flow started
+1
+2
+3
+````
+
 ## Channels
 
 ## Coroutine exception handling
