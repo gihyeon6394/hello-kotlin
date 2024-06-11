@@ -2001,6 +2001,16 @@ Emitting 2
 Done
 ````
 
+### Flow builders
+
+- `flow{...}` 빌더는 가장 간단한 flow builder
+- `flowOf` : 고정된 수의 값을 flow로 변환
+- `.asFlow()` : 다양한 컬렉션이나 시퀀스를 flow로 변환
+
+```kotlin
+(1..3).asFlow().collect { value -> println(value) }
+```
+
 ## Channels
 
 ## Coroutine exception handling
