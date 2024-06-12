@@ -2011,6 +2011,88 @@ Done
 (1..3).asFlow().collect { value -> println(value) }
 ```
 
+### Intermediate flow operators
+
+- intermediate operator : flow를 변환하거나, 다른 flow를 반환
+- `map`, `filter`, ...
+- 시퀀스와 다른점 : operator 안의 코드가 suspending function일 수 있음
+
+```kotlin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
+
+suspend fun performRequest(request: Int): String {
+    delay(1000) // imitate long-running asynchronous work
+    return "response $request"
+}
+
+fun main() = runBlocking {
+    (1..3).asFlow() // a flow of requests
+        .map { request -> performRequest(request) }
+        .collect { response -> println(response) }
+}
+```
+
+````
+response 1
+response 2
+response 3
+````
+
+#### Transform operator
+
+- `transform` : 각 요소를 변환하고, 새로운 flow를 반환
+
+````kotlin
+(1..3).asFlow() // a flow of requests
+    .transform { request ->
+        emit("Making request $request")
+        emit(performRequest(request))
+    }
+    .collect { response -> println(response) }
+````
+
+````
+Making request 1
+response 1
+Making request 2
+response 2
+Making request 3
+response 3
+````
+
+#### Size-limiting operator
+
+- `take` 처럼 limit에 도달하면 flow 실행 취소
+- 코루틴의 취소는 항상 예외로부터 가능
+
+```kotlin
+fun numbers(): Flow<Int> = flow {
+    try {
+        emit(1)
+        emit(2)
+        println("This line will not execute")
+        emit(3) // throw exception
+    } finally {
+        println("Finally in numbers")
+    }
+}
+
+fun main() = runBlocking {
+    numbers()
+        .take(2) // take only the first two
+        .collect { value -> println(value) }
+}
+```
+
+````
+1
+2
+Finally in numbers
+````
+
 ## Channels
 
 ## Coroutine exception handling
