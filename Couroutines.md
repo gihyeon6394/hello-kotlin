@@ -2093,6 +2093,21 @@ fun main() = runBlocking {
 Finally in numbers
 ````
 
+### Terminal flow operators
+
+- flow의 terminal operation은 **suspending function**
+- `collect` : flow를 실행하고, 각 요소를 처리
+- `toList`, `toSet` : flow를 리스트나 셋으로 변환
+- `first`, `single` : 첫번째 요소나 유일한 요소를 반환
+- `reduce`, `fold` : flow의 요소를 하나의 값으로 축소
+
+```kotlin
+val sum = (1..5).asFlow()
+    .map { it * it } // squares of numbers from 1 to 5                           
+    .reduce { a, b -> a + b } // sum them (terminal operator)
+println(sum)
+```
+
 ## Channels
 
 ## Coroutine exception handling
