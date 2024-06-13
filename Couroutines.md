@@ -2108,6 +2108,47 @@ val sum = (1..5).asFlow()
 println(sum)
 ```
 
+### Flows are sequential
+
+- flow는 sequential하게 실행됨
+- terminal operator를 실행한 코루틴에서 flow의 모든 연산이 실행됨
+    - 새로운 코루틴이 생성되지 않음l
+
+```kotlin
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
+
+fun main() = runBlocking {
+    (1..5).asFlow()
+        .filter {
+            println("Filter $it")
+            it % 2 == 0
+        }
+        .map {
+            println("Map $it")
+            "string $it"
+        }.collect {
+            println("Collect $it")
+        }
+}
+```
+
+````
+Filter 1
+Filter 2
+Map 2
+Collect string 2
+Filter 3
+Filter 4
+Map 4
+Collect string 4
+Filter 5
+
+Process finished with exit code 0
+````
+
 ## Channels
 
 ## Coroutine exception handling
