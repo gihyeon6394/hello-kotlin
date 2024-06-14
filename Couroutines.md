@@ -2112,7 +2112,7 @@ println(sum)
 
 - flow는 sequential하게 실행됨
 - terminal operator를 실행한 코루틴에서 flow의 모든 연산이 실행됨
-    - 새로운 코루틴이 생성되지 않음l
+    - 새로운 코루틴이 생성되지 않음
 
 ```kotlin
 import kotlinx.coroutines.flow.asFlow
@@ -2147,6 +2147,101 @@ Collect string 4
 Filter 5
 
 Process finished with exit code 0
+````
+
+### Flow context
+
+- flow 컬렉션은 항상 코루틴 컨텍스트에서 실행됨
+- **context preservation** : flow의 연산은 flow의 context에서 실행되는 성격
+
+```kotlin
+withContext(context) {
+    simple().collect { value ->
+        println(value) // run in the specified context
+    }
+}
+```
+
+```kotlin
+fun simple(): Flow<Int> = flow {
+    log("Started simple flow")
+    for (i in 1..3) {
+        emit(i)
+    }
+}
+
+fun main() = runBlocking<Unit> {
+    simple().collect { value -> log("Collected $value") }
+}
+```
+
+````
+[main @coroutine#1] Started simple flow
+[main @coroutine#1] Collected 1
+[main @coroutine#1] Collected 2
+[main @coroutine#1] Collected 3
+````
+
+- `simple().collect` 는 `runBlocking`의 context에서 실행됨
+- flow 빌더 안의 코드는 `flow` 빌더가 호출되는 context에서 실행됨
+
+#### A common pitfall when using withContext
+
+- `withContext`를 사용하여 컨텍스트 변경 가능
+- 하지만 flow 빌더는 context preservation의 주인이어야함, `emit()` 을 다른 컨텍스트에서 호출하면 안됨
+
+```kotlin
+fun simpleDifferentContext(): Flow<Int> = flow {
+    // The WRONG way to change context for CPU-consuming code in flow builder
+    kotlinx.coroutines.withContext(Dispatchers.Default) {
+        for (i in 1..3) {
+            Thread.sleep(100) // pretend we are computing it in CPU-consuming way
+            emit(i) // emit next value
+        }
+    }
+}
+
+fun main() = runBlocking {
+    simpleDifferentContext().collect { value -> log("Collected $value") }
+}
+````
+
+````
+Exception in thread "main" java.lang.IllegalStateException: Flow invariant is violated:
+		Flow was collected in [BlockingCoroutine{Active}@72dd3e6e, BlockingEventLoop@74f3eb40],
+		but emission happened in [DispatchedCoroutine{Active}@72412f39, Dispatchers.Default].
+		Please refer to 'flow' documentation or use 'flowOn' instead
+		...
+````
+
+#### flowOn operator
+
+- `flowOn` : flow의 context를 변경
+- 다른 코루틴을 생성해서 flow의 연산을 다른 context에서 실행
+
+```kotlin
+fun simple(): Flow<Int> = flow {
+    for (i in 1..3) {
+        Thread.sleep(100) // pretend we are computing it in CPU-consuming way
+        log("Emitting $i")
+        emit(i) // emit next value
+    }
+}.flowOn(Dispatchers.Default) // RIGHT way to change context for CPU-consuming code in flow builder
+
+fun main() = runBlocking<Unit> {
+    simple().collect { value ->
+        log("Collected $value")
+    }
+}  
+````
+
+````
+[DefaultDispatcher-worker-1] Emitting 1
+[main] Collected 1
+[DefaultDispatcher-worker-1] Emitting 2
+[main] Collected 2
+[DefaultDispatcher-worker-1] Emitting 3
+[main] Collected 3
 ````
 
 ## Channels
