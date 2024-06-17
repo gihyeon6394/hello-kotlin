@@ -2244,6 +2244,108 @@ fun main() = runBlocking<Unit> {
 [main] Collected 3
 ````
 
+### Buffering
+
+- flow의 일부를 서로 다른 코루틴에서 실행
+
+```kotlin
+fun simple3(): Flow<Int> = flow {
+    for (i in 1..3) {
+        delay(100) // pretend we are asynchronously waiting 100 ms
+        emit(i) // emit next value
+    }
+}
+
+fun main() = runBlocking {
+    val time = measureTimeMillis {
+        simple3().collect { value ->
+            delay(300) // pretend we are processing it for 300 ms
+            println(value)
+        }
+    }
+    println("Collected in $time ms")
+}
+```
+
+````
+1
+2
+3
+Collected in 1232 ms
+````
+
+- 프로그램 완료까지 1,200ms가 소요됨
+
+```kotlin
+val timeBuffer = measureTimeMillis {
+    simple()
+        .buffer() // buffer emissions, don't wait
+        .collect { value ->
+            delay(300) // pretend we are processing it for 300 ms
+            println(value)
+        }
+}
+println("Collected in $timeBuffer ms")
+```
+
+````
+1
+2
+3
+Collected in 1039 ms
+````
+
+- `buffer` operator를 사용하여 flow를 concurrent하게 실행
+
+### Conflaction
+
+- `conflate` operator : flow 요소를 처리하던 중 다음 요소가 이미 emit되었을때, 이전 요소를 무시
+
+```kotlin
+val timeConflate = measureTimeMillis {
+    simple()
+        .conflate() // conflate emissions, don't process each one
+        .collect { value ->
+            delay(300) // pretend we are processing it for 300 ms
+            println(value)
+        }
+}
+println("Collected in $timeConflate ms")
+```
+
+````
+1
+3
+Collected in 713 ms
+````
+
+- flow 2번쨰가 실행되는 순간에 3번쨰가 끝나니 2번쨰는 무시됨
+
+#### Processing the latest value
+
+- 새로운 값이 emit 될때마다 이전 값을 무시하고 최신 값을 처리
+- `xxxLatest` operator : 최신 값을 처리하고, 이전 값을 무시
+
+```kotlin
+val timeCollectLatest = measureTimeMillis {
+    simple()
+        .collectLatest { value -> // cancel & restart on the latest value
+            println("Collecting $value")
+            delay(300) // pretend we are processing it for 300 ms
+            println("Done $value")
+        }
+}
+println("Collected in $timeCollectLatest ms")
+```
+
+````
+Collecting 1
+Collecting 2
+Collecting 3
+Done 3
+Collected in 638 ms
+````
+
 ## Channels
 
 ## Coroutine exception handling
