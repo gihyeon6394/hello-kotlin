@@ -2346,6 +2346,79 @@ Done 3
 Collected in 638 ms
 ````
 
+### Composing multiple flows
+
+- flow를 합치는 방법
+
+#### Zip
+
+- `Sequence.zip` 처럼 flow에도 `zip` operator가 있음
+
+```kotlin
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.zip
+
+suspend fun main() {
+    val nums = (1..3).asFlow()
+    val strs = flowOf("one", "two", "three")
+    nums.zip(strs) { a, b -> "$a -> $b" }.collect { println(it) }
+}
+```
+
+````
+1 -> one
+2 -> two
+3 -> three
+
+Process finished with exit code 0
+````
+
+#### Combine
+
+- `combine` operator : 두 flow의 최신 값을 결합
+- e.g. flow의 각 숫자가 300ms마다 수정되고, 문자열이 400ms마다 수정되면,
+    - `zip` 은 400ms마다 값을 출력
+    - `combine` 은 300ms마다 값을 출력
+
+```kotlin
+val nums = (1..3).asFlow().onEach { delay(300) } // numbers 1..3 every 300 ms
+val strs = flowOf("one", "two", "three").onEach { delay(400) } // strings every 400 ms
+val startTime = System.currentTimeMillis() // remember the start time
+nums.zip(strs) { a, b -> "$a -> $b" } // compose a single string with "zip"
+    .collect { value -> // collect and print
+        println("$value at ${System.currentTimeMillis() - startTime} ms from start")
+    }
+```
+
+````
+1 -> one at 440 ms from start
+2 -> two at 852 ms from start
+3 -> three at 1257 ms from start
+
+Process finished with exit code 0
+````
+
+```kotlin
+val nums2 = (1..3).asFlow().onEach { delay(300) } // numbers 1..3 every 300 ms
+val strs2 = flowOf("one", "two", "three").onEach { delay(400) } // strings every 400 ms
+val startTime2 = System.currentTimeMillis() // remember the start time
+nums2.combine(strs2) { a, b -> "$a -> $b" } // compose a single string with "combine"
+    .collect { value -> // collect and print
+        println("$value at ${System.currentTimeMillis() - startTime2} ms from start")
+    }
+```
+
+````
+1 -> one at 414 ms from start
+2 -> one at 622 ms from start
+2 -> two at 821 ms from start
+3 -> two at 926 ms from start
+3 -> three at 1222 ms from start
+
+Process finished with exit code 0
+````
+
 ## Channels
 
 ## Coroutine exception handling
