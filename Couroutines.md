@@ -2419,6 +2419,105 @@ nums2.combine(strs2) { a, b -> "$a -> $b" } // compose a single string with "com
 Process finished with exit code 0
 ````
 
+### Flattening flows
+
+- flow의 flow를 합치는 방법 **flattened**
+- Collection의 `flatten()`, `flatMap()`과 유사
+
+````kotlin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+
+fun requestFlow(i: Int): Flow<String> = flow {
+    emit("$i: First")
+    delay(500) // wait 500 ms
+    emit("$i: Second")
+}
+
+fun main() {
+    requestFlow(1) // return Flow<String>
+    (1..3).asFlow().map { requestFlow(it) } // return Flow<Flow<String>>
+}
+
+````
+
+#### flatMapConcat
+
+- `flatMapConcat`, `flattenConcat` : flow의 flow를 순차적으로 합침
+- flow 안에서 이전 collection이 완료되어야 다음 collection이 시작됨
+
+````kotlin
+val startTime = System.currentTimeMillis() // remember the start time
+(1..3).asFlow().onEach { delay(100) } // emit a number every 100 ms
+    .flatMapConcat { requestFlow(it) }
+    .collect { value -> // collect and print
+        println("$value at ${System.currentTimeMillis() - startTime} ms from start")
+    }
+````
+
+````
+1: First at 128 ms from start
+1: Second at 634 ms from start
+2: First at 734 ms from start
+2: Second at 1240 ms from start
+3: First at 1345 ms from start
+3: Second at 1850 ms from start
+
+Process finished with exit code 0
+````
+
+#### flatMapMerge
+
+- `flatMapMerge`, `flattenMerge` : flow의 flow를 병렬로 합침
+- concurrent하게 합쳐서져서 value가 합쳐지는대로 출력
+- optional parameter로 `concurrency`를 지정하여 병렬로 합칠 수 있음
+
+````kotlin
+val startTime = System.currentTimeMillis() // remember the start time
+(1..3).asFlow().onEach { delay(100) } // a number every 100 ms
+    .flatMapMerge { requestFlow(it) }
+    .collect { value -> // collect and print
+        println("$value at ${System.currentTimeMillis() - startTime} ms from start")
+    }
+````
+
+````
+1: First at 137 ms from start
+2: First at 240 ms from start
+3: First at 341 ms from start
+1: Second at 642 ms from start
+2: Second at 744 ms from start
+3: Second at 843 ms from start
+
+Process finished with exit code 0
+````
+
+#### flatMapLatest
+
+- `collectLatest` operator와 유사
+- 다음 flow에서 emit되면 이전 flow를 취소
+
+````kotlin
+val startTime = System.currentTimeMillis() // remember the start time
+(1..3).asFlow().onEach { delay(100) } // a number every 100 ms
+    .flatMapLatest { requestFlow(it) }
+    .collect { value -> // collect and print
+        println("$value at ${System.currentTimeMillis() - startTime} ms from start")
+    }
+````
+
+````
+1: First at 106 ms from start
+2: First at 213 ms from start
+3: First at 316 ms from start
+3: Second at 820 ms from start
+
+Process finished with exit code 0
+````
+
 ## Channels
 
 ## Coroutine exception handling
