@@ -2518,6 +2518,80 @@ val startTime = System.currentTimeMillis() // remember the start time
 Process finished with exit code 0
 ````
 
+### Flow exceptions
+
+- flow에서 예외가 발생해도 완료 시킬 수 있음
+
+#### Collector try and catch
+
+- kotlin `try/catch` block을 사용함
+
+```kotlin
+fun simple(): Flow<Int> = flow {
+    for (i in 1..3) {
+        println("Emitting $i")
+        emit(i) // emit next value
+    }
+}
+
+fun main() = runBlocking {
+    try {
+        simple().collect { value ->
+            println(value)
+            check(value <= 1) { "Collected $value" }
+        }
+    } catch (e: Throwable) {
+        println("Caught $e")
+    }
+}
+```
+
+````
+Emitting 1
+1
+Emitting 2
+2
+Caught java.lang.IllegalStateException: Collected 2
+
+Process finished with exit code 0
+````
+
+#### Everything is caught
+
+- `map` operator 안에서 발생한 예외도 `collect`에서 잡힘
+
+````kotlin
+fun simple(): Flow<String> =
+    flow {
+        for (i in 1..3) {
+            println("Emitting $i")
+            emit(i) // emit next value
+        }
+    }.map { value ->
+        check(value <= 1) { "Crashed on $value" }
+        "string $value"
+    }
+
+fun main() = runBlocking {
+  try {
+    simple().collect { value ->
+      println(value)
+    }
+  } catch (e: Throwable) {
+    println("Caught $e")
+  }
+}
+````
+
+````
+Emitting 1
+string 1
+Emitting 2
+Caught java.lang.IllegalStateException: Crashed on 2
+
+Process finished with exit code 0
+````
+
 ## Channels
 
 ## Coroutine exception handling
