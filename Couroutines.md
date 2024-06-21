@@ -2573,13 +2573,13 @@ fun simple(): Flow<String> =
     }
 
 fun main() = runBlocking {
-  try {
-    simple().collect { value ->
-      println(value)
+    try {
+        simple().collect { value ->
+            println(value)
+        }
+    } catch (e: Throwable) {
+        println("Caught $e")
     }
-  } catch (e: Throwable) {
-    println("Caught $e")
-  }
 }
 ````
 
@@ -2590,6 +2590,77 @@ Emitting 2
 Caught java.lang.IllegalStateException: Crashed on 2
 
 Process finished with exit code 0
+````
+
+### Exception transparency
+
+````kotlin
+simple()
+    .catch { e -> emit("Caught $e") } // emit on exception
+    .collect { value -> println(value) }
+````
+
+- flow emitter 는 예외를 투명하게 관리 (transparent)
+- `try/catch` 블럭 안에서 `flow` 빌더를 사용하여 emmit 하는것은 투명성 위반
+- collector가 던진 예외는 항상 flow의 `catch` 블럭에서 잡히는 것을 보장
+- emitter 가 `catch` operator 를 사용해 예외를 캡슐화할 수 있음
+    - `catch` operator가 잡는 예외
+        - `throw` 로 발생한 예외
+        - `catch` 바디에서 `emit` 하다 발생한 예외
+        - 무시되거나, 로깅되거나, 다른 방법으로 처리되는 예외
+
+#### Transparent catch
+
+- `catch` operator를 exception transparency를 위해 사용
+- 반드시 upstream 에서 발생한 예외를 잡아야함 (downstream에서 발생한 예외는 잡히지 않음)
+
+````kotlin
+fun simple(): Flow<Int> = flow {
+    for (i in 1..3) {
+        println("Emitting $i")
+        emit(i)
+    }
+}
+
+fun main() = runBlocking<Unit> {
+    simple()
+        .catch { e -> println("Caught $e") } // does not catch downstream exceptions
+        .collect { value ->
+            check(value <= 1) { "Collected $value" }
+            println(value)
+        }
+}        
+````
+
+````
+Emitting 1
+1
+Emitting 2
+Exception in thread "main" java.lang.IllegalStateException: Collected 2
+ at FileKt$main$1$2.emit (File.kt:15) 
+ at FileKt$main$1$2.emit (File.kt:14) 
+ at kotlinx.coroutines.flow.FlowKt__ErrorsKt$catchImpl$2.emit (Errors.kt:158) 
+````
+
+#### Catching declaratively
+
+- `collect` 를 `onEach`로 변경하여 `catch` operator 이전에 배치
+
+````kotl
+simple()
+    .onEach { value ->
+        check(value <= 1) { "Collected $value" }                 
+        println(value) 
+    }
+    .catch { e -> println("Caught $e") }
+    .collect()
+````
+
+````
+Emitting 1
+1
+Emitting 2
+Caught java.lang.IllegalStateException: Collected 2
 ````
 
 ## Channels
