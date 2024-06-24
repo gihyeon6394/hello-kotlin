@@ -2663,6 +2663,83 @@ Emitting 2
 Caught java.lang.IllegalStateException: Collected 2
 ````
 
+### Flow completion
+
+- flow는 imperative, declarative 방식으로 완료될 수 있음
+
+#### Imperative finally block
+
+- `finally` block을 사용하여 flow 완료시 실행
+
+````kotlin
+fun simple(): Flow<Int> = (1..3).asFlow()
+
+fun main() = runBlocking<Unit> {
+    try {
+        simple().collect { value -> println(value) }
+    } finally {
+        println("Done")
+    }
+}            
+````
+
+#### Declarative handling
+
+- `onCompletion` operator를 사용하여 flow 완료시 실행
+- 장점 : nullable `Throwable`을 받을 수 있음
+    - `catch`와 달리 예외 처리는 할 수 없음
+    - 자동으로 downstream으로 전파됨
+
+````kotlin
+simple()
+    .onCompletion { println("Done") }
+    .collect { value -> println(value) }
+````
+
+````kotlin
+fun simple(): Flow<Int> = flow {
+    emit(1)
+    throw RuntimeException()
+}
+
+fun main() = runBlocking<Unit> {
+    simple()
+        .onCompletion { cause -> if (cause != null) println("Flow completed exceptionally") }
+        .catch { cause -> println("Caught exception") }
+        .collect { value -> println(value) }
+}            
+````
+
+````
+1
+Flow completed exceptionally
+Caught exception
+````
+
+#### Successful completion
+
+- `onCompletion` operator는 성공적인 완료에 대해서도 실행됨
+    - `null` cause를 받음
+
+````kotlin
+fun simple(): Flow<Int> = (1..3).asFlow()
+
+fun main() = runBlocking<Unit> {
+    simple()
+        .onCompletion { cause -> println("Flow completed with $cause") }
+        .collect { value ->
+            check(value <= 1) { "Collected $value" }
+            println(value)
+        }
+}
+````
+
+````
+1
+Flow completed with java.lang.IllegalStateException: Collected 2
+Exception in thread "main" java.lang.IllegalStateException: Collected 2
+````
+
 ## Channels
 
 ## Coroutine exception handling
