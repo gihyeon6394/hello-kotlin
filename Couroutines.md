@@ -2740,6 +2740,17 @@ Flow completed with java.lang.IllegalStateException: Collected 2
 Exception in thread "main" java.lang.IllegalStateException: Collected 2
 ````
 
+### Imperative versus declarative
+
+- flow의 Completion, exception은 imperative, declarative 방식으로 처리 가능
+- 각자 장단점이 있음
+- imperative
+    - `try/catch/finally` 블럭을 사용하여 flow의 완료를 처리
+    - 예외 처리가 가능
+- declarative
+    - `onCompletion` operator를 사용하여 flow의 완료를 처리
+    - 성공적인 완료와 예외 완료를 구분할 수 있음
+
 ## Channels
 
 ## Coroutine exception handling
