@@ -2646,11 +2646,11 @@ Exception in thread "main" java.lang.IllegalStateException: Collected 2
 
 - `collect` 를 `onEach`로 변경하여 `catch` operator 이전에 배치
 
-````kotl
+````kotlin
 simple()
     .onEach { value ->
-        check(value <= 1) { "Collected $value" }                 
-        println(value) 
+        check(value <= 1) { "Collected $value" }
+        println(value)
     }
     .catch { e -> println("Caught $e") }
     .collect()
@@ -2750,6 +2750,126 @@ Exception in thread "main" java.lang.IllegalStateException: Collected 2
 - declarative
     - `onCompletion` operator를 사용하여 flow의 완료를 처리
     - 성공적인 완료와 예외 완료를 구분할 수 있음
+
+### Launching flow
+
+- 어딘가에서 발생한 이벤트를 flow를 사용해 비동기로 처리
+- `addEventListener()` : 이벤트에 대한 리스너를 등록
+- `onEach` operator : 이벤트를 flow로 변환
+- `onEach` 는 intermediate operator이므로 terminal operator를 추가로 호출해야함 (e.g. `collect`)
+- `launchIn` : flow를 시작하고, 취소할 수 있는 `Job`을 반환 (별도의 코루틴에서 실행)
+    - 파라미터로 `CoroutineScope`를 전달
+    - `Job` 을 반환하기 때문에 `cancel`을 사용하여 flow를 취소할 수 있음
+- `onEach { ... }.launchIn(scope)` : 마치 이벤트 리스너처럼 작동함
+    - 해당 scope이 취소되면 flow도 취소됨
+
+````kotlin
+// Imitate a flow of events
+fun events(): Flow<Int> = (1..3).asFlow().onEach { delay(100) }
+
+fun main() = runBlocking<Unit> {
+    events()
+        .onEach { event -> println("Event: $event") }
+        .collect() // <--- Collecting the flow waits
+    println("Done")
+}   
+````
+
+````
+Event: 1
+Event: 2
+Event: 3
+Done
+
+Process finished with exit code 0
+````
+
+```kotlin
+events()
+    .onEach { event -> println("Event: $event") }
+    .launchIn(this) // <--- Launching the flow in a separate coroutine
+println("Done")
+
+```
+
+````
+Done
+Event: 1
+Event: 2
+Event: 3
+````
+
+#### Flow cancellation checks
+
+- `ensureActive()` : flow가 취소되었는지 확인
+- 대부분의 flow operator들은 성능의 이유로 cacecllation check를 하지 않음
+    - e.g. `IntRage.asFlow`
+
+```kotlin
+fun foo(): Flow<Int> = flow {
+  for (i in 1..5) {
+    println("Emitting $i")
+    emit(i)
+  }
+}
+
+fun main() = runBlocking<Unit> {
+  foo().collect { value ->
+    if (value == 3) cancel()
+    println(value)
+  }
+}
+```
+
+````
+Emitting 1
+1
+Emitting 2
+2
+Emitting 3
+3
+Emitting 4
+Exception in thread "main" kotlinx.coroutines.JobCancellationException: BlockingCoroutine was cancelled; job=BlockingCoroutine{Cancelled}@27f674d
+````
+
+````kotlin
+fun main() = runBlocking<Unit> {
+    (1..5).asFlow().collect { value ->
+        if (value == 3) cancel() // cancel이 발생하지만 runBlocking thread가 종료되어야 알 수 있음
+        println(value)
+    }
+}
+````
+
+````
+1
+2
+3
+4
+5
+Exception in thread "main" kotlinx.coroutines.JobCancellationException: BlockingCoroutine was cancelled; job="coroutine#1":BlockingCoroutine{Cancelled}@3327bd23
+````
+
+##### Making busy flow cancellable
+
+- `.onEach { currentCoroutineContext().ensureActive() }` : flow가 취소되었는지 확인을 명시
+- `cancellable()` : flow를 취소 가능하게 만듬
+
+````kotlin
+fun main() = runBlocking<Unit> {
+    (1..5).asFlow().cancellable().collect { value ->
+        if (value == 3) cancel()
+        println(value)
+    }
+}
+````
+
+````
+1
+2
+3
+Exception in thread "main" kotlinx.coroutines.JobCancellationException: BlockingCoroutine was cancelled; job="coroutine#1":BlockingCoroutine{Cancelled}@5ec0a365
+````
 
 ## Channels
 
