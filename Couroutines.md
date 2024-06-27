@@ -2807,17 +2807,17 @@ Event: 3
 
 ```kotlin
 fun foo(): Flow<Int> = flow {
-  for (i in 1..5) {
-    println("Emitting $i")
-    emit(i)
-  }
+    for (i in 1..5) {
+        println("Emitting $i")
+        emit(i)
+    }
 }
 
 fun main() = runBlocking<Unit> {
-  foo().collect { value ->
-    if (value == 3) cancel()
-    println(value)
-  }
+    foo().collect { value ->
+        if (value == 3) cancel()
+        println(value)
+    }
 }
 ```
 
@@ -2870,6 +2870,19 @@ fun main() = runBlocking<Unit> {
 3
 Exception in thread "main" kotlinx.coroutines.JobCancellationException: BlockingCoroutine was cancelled; job="coroutine#1":BlockingCoroutine{Cancelled}@5ec0a365
 ````
+
+### Flow and Reactive Streams
+
+- Flow는 reactive stream의 publisher와 유사
+- Flow는 `Reactive Streams`나 reactive framework (e.g. RxJava)와 유사
+- Reactive Sterams에서 영감을 받아 구현되었음
+- Flow의 목표 : 심플 디자인, 코틀린의 structured concurrency와 잘 어울림
+- Flow를 reactive stream pulisher로 변환하거나, 그 반대로 변환 가능
+    - `kotlinx,coroutines` 에서 제공 중
+    - `kotlinx-coroutines-reactive` : Reactive Streams 전용
+    - `kotlinx-coroutines-rx2` : RxJava2 전용
+    - `kotlinx-coroutines-rx3` : RxJava3 전용
+    - `kotlinx-coroutines-reactor` : Project Reactor 전용
 
 ## Channels
 
