@@ -2886,6 +2886,35 @@ Exception in thread "main" kotlinx.coroutines.JobCancellationException: Blocking
 
 ## Channels
 
+- deferred value를 사용해서 코루틴 간에 값을 전달할 수 있음
+
+### Channel basics
+
+- `Channel` : `BlockingQueue`와 유사한 특수한 coroutine
+- `BlockingQueue` 와 다른점
+    - `put` blocking 대신 suspending function `send`
+    - `take` blocking 대신 suspending function `receive`
+
+```kotlin
+
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+
+fun main() = runBlocking {
+    val channel = Channel<Int>()
+    launch {
+        // this might be heavy CPU-consuming computation or async logic,
+        // we'll just send five squares
+        for (x in 1..5) channel.send(x * x)
+    }
+    // here we print five received integers:
+    repeat(5) { println(channel.receive()) }
+    println("Done!")
+}
+```
+
+
 ## Coroutine exception handling
 
 ## Shared mutuable state and concurrency
