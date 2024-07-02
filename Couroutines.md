@@ -2914,6 +2914,40 @@ fun main() = runBlocking {
 }
 ```
 
+### Closing and iteration over channels
+
+- queue와 다릴, Channel은 다음 el이 없으면 닫을 수 있음
+- `for` loop를 사용하여 channel을 iterate 가능
+- `close` : channel에 close token을 전송
+-
+
+```kotlin
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+
+fun main() = runBlocking {
+    val channel = Channel<Int>()
+    launch {
+        for (x in 1..5) channel.send(x * x)
+        channel.close() // we're done sending
+    }
+// here we print received values using `for` loop (until the channel is closed)
+    for (y in channel) println(y)
+    println("Done!")
+}
+```
+
+````
+1
+4
+9
+16
+25
+Done!
+
+Process finished with exit code 0
+````
 
 ## Coroutine exception handling
 
