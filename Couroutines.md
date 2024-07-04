@@ -2919,7 +2919,6 @@ fun main() = runBlocking {
 - queue와 다릴, Channel은 다음 el이 없으면 닫을 수 있음
 - `for` loop를 사용하여 channel을 iterate 가능
 - `close` : channel에 close token을 전송
--
 
 ```kotlin
 import kotlinx.coroutines.channels.Channel
@@ -2948,6 +2947,30 @@ Done!
 
 Process finished with exit code 0
 ````
+
+### Building channel producers
+
+- producer-consumer 패턴
+- `produce()` : 프로듀서 입장에서 사용하는 코루틴 빌더
+- `consumeEach` : 컨슈머 입장에서 사용하는 확장 함수
+
+```kotlin
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.channels.produce
+import kotlinx.coroutines.runBlocking
+
+fun CoroutineScope.produceSquares(): ReceiveChannel<Int> = produce {
+    for (x in 1..5) send(x * x)
+}
+
+fun main() = runBlocking {
+    val squares = produceSquares()
+    squares.consumeEach { println(it) }
+    println("Done!")
+}
+```
 
 ## Coroutine exception handling
 
