@@ -2972,6 +2972,35 @@ fun main() = runBlocking {
 }
 ```
 
+### Pipelines
+
+- pipeline 패턴 : 코루틴이 무한하게 값을 생성하게 함
+- 다른 코루틴은 해당 stream으로부터 소비하여 값을 가공
+
+```kotlin
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.produce
+import kotlinx.coroutines.runBlocking
+
+fun CoroutineScope.produceNumbers() = produce<Int> {
+    var x = 1
+    while (true) send(x++) // infinite stream of integers starting from 1
+}
+
+fun CoroutineScope.square(numbers: ReceiveChannel<Int>): ReceiveChannel<Int> = produce {
+    for (x in numbers) send(x * x)
+}
+
+fun main() = runBlocking {
+    val numbers = produceNumbers()
+    val squares = square(numbers)
+    repeat(5) { println(squares.receive()) }
+    println("Done!")
+}
+
+```
+
 ## Coroutine exception handling
 
 ## Shared mutuable state and concurrency
