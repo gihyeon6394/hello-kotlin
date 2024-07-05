@@ -3001,6 +3001,69 @@ fun main() = runBlocking {
 
 ```
 
+### Prime numbers with pipeline
+
+```kotlin
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.produce
+import kotlinx.coroutines.runBlocking
+
+
+// producer : produces a sequence of numbers starting from start
+fun CoroutineScope.numbersFrom(start: Int) = produce {
+    var x = start
+    while (true) send(x++) // infinite stream of integers from start
+}
+
+// filter : filters out numbers not divisible by prime
+fun CoroutineScope.filter(numbers: ReceiveChannel<Int>, prime: Int) = produce {
+    for (x in numbers) if (x % prime != 0) send(x)
+}
+
+
+fun main() = runBlocking {
+    var cur = numbersFrom(2)
+    repeat(10) {
+        val prime = cur.receive()
+        println(prime)
+        cur = filter(cur, prime)
+    }
+    coroutineContext.cancelChildren() // cancel all children to let main finish
+}
+
+```
+
+- `iterator` 코루틴 빌더로 pipeline을 구현할 수 있음
+    - `produce` -> `iterator`
+    - `send` -> `yield`
+    - `receive` -> `next`
+    - `ReceiveChannel` -> `Iterator`
+- 다른점 : channel을 사용하면 코루틴이 동시에 실행되지만, iterator는 순차적으로 실행됨
+    - parallel processing을 위해서는 `produce`를 사용해야함
+
+```kotlin
+
+fun CoroutineScope.numbersFrom(start: Int) = iterator {
+    var x = start
+    while (true) yield(x++) // infinite stream of integers from start
+}
+
+fun CoroutineScope.filter(numbers: Iterator<Int>, prime: Int) = iterator {
+    for (x in numbers) if (x % prime != 0) yield(x)
+}
+
+fun main() = runBlocking {
+    var cur = numbersFrom(2)
+    repeat(10) {
+        val prime = cur.next()
+        println(prime)
+        cur = filter(cur, prime)
+    }
+}
+```
+
 ## Coroutine exception handling
 
 ## Shared mutuable state and concurrency
