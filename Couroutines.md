@@ -3104,7 +3104,7 @@ fun CoroutineScope.launchProcessor(id: Int, channel: ReceiveChannel<Int>) = laun
 
 ## Coroutine exception handling
 
-## Shared mutuable state and concurrency
+## Shared mutable state and concurrency
 
 ## Select expression (experimental)
 
