@@ -3064,6 +3064,44 @@ fun main() = runBlocking {
 }
 ```
 
+### Fan-out
+
+- 여러 코루틴이 하나의 channel로부터 receive
+- `consumeEach` 와 달리 `for` loop로 여러 코루틴이 동시에 값을 받을 수 있음
+    - 한 코루틴이 실패해도 다른 코루틴은 계속 실행됨
+    - `consumeEach` 는 한 코루틴이 실패하면 채널이 취소됨
+
+```kotlin
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.produce
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+
+
+fun main() = runBlocking {
+    val producer = produceNumber()
+    repeat(5) { launchProcessor(it, producer) }
+    delay(950)
+    producer.cancel() // cancel producer coroutine and thus kill them all
+}
+
+fun CoroutineScope.produceNumber() = produce {
+    var x = 1
+    while (true) {
+        send(x++)
+        delay(100)
+    }
+}
+
+fun CoroutineScope.launchProcessor(id: Int, channel: ReceiveChannel<Int>) = launch {
+    for (msg in channel) {
+        println("Processor #$id received $msg")
+    }
+}
+```
+
 ## Coroutine exception handling
 
 ## Shared mutuable state and concurrency
