@@ -3137,6 +3137,44 @@ suspend fun sendString(channel: SendChannel<String>, s: String, time: Long) {
 }
 ```
 
+### Buffered channels
+
+- Unbefferd channel은 랑데부 : sender와 receiver가 만나면 그 즉시 element를 전달
+    - sender가 보내면 receiver가 받을 때까지 기다림
+    - receiver가 받으면 sender가 보낼 때까지 기다림
+- `Channel` 과 `produce` 는 파라미터로 `capacity`를 받음
+    - `capacity` : buffer size
+
+```kotlin
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+
+fun main() = runBlocking {
+    val channel = Channel<Int>(4) // create buffered channel
+    val sender = launch { // launch sender coroutine
+        repeat(10) {
+            println("Sending $it") // print before sending each element
+            channel.send(it) // will suspend when buffer is full
+        }
+    }
+    // don't receive anything... just wait....
+    delay(1000)
+    sender.cancel() // cancel sender coroutine
+}
+```
+
+````
+Sending 0
+Sending 1
+Sending 2
+Sending 3
+Sending 4
+
+Process finished with exit code 0
+````
+
 ## Coroutine exception handling
 
 ## Shared mutable state and concurrency
