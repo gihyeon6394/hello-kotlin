@@ -3218,6 +3218,57 @@ pong Ball(hits=4)
 Process finished with exit code 0
 ````
 
+### Ticker channels
+
+- 일정한 시간을 간격으로 `Unit` 을 보내는 특별한 랑데부 채널
+- 복잡한 time-based `produce()` 파이프라인에 유용
+- `ticker()` : 채널 생성
+- `ReceiveChannel.cancel()` : 채널 취소
+
+```kotlin
+package coroutines.channels
+
+import kotlinx.coroutines.channels.ticker
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
+
+fun main() = runBlocking {
+    val tickerChannel = ticker(delayMillis = 200, initialDelayMillis = 0) // create a ticker channel
+    var nextElement = withTimeoutOrNull(1) { tickerChannel.receive() }
+    println("Initial element is available immediately: $nextElement") // no initial delay
+
+    nextElement = withTimeoutOrNull(100) { tickerChannel.receive() } // all subsequent elements have 200ms delay
+    println("Next element is not ready in 100 ms: $nextElement")
+
+    nextElement = withTimeoutOrNull(120) { tickerChannel.receive() }
+    println("Next element is ready in 200 ms: $nextElement")
+
+    // Emulate large consumption delays
+    println("Consumer pauses for 300ms")
+    delay(300)
+    // Next element is available immediately
+    nextElement = withTimeoutOrNull(1) { tickerChannel.receive() }
+    println("Next element is available immediately after large consumer delay: $nextElement")
+    // Note that the pause between `receive` calls is taken into account and next element arrives faster
+    nextElement = withTimeoutOrNull(120) { tickerChannel.receive() }
+    println("Next element is ready in 100ms after consumer pause in 300ms: $nextElement")
+
+    tickerChannel.cancel() // indicate that no more elements are needed
+}
+```
+
+````
+Initial element is available immediately: kotlin.Unit
+Next element is not ready in 100 ms: null
+Next element is ready in 200 ms: kotlin.Unit
+Consumer pauses for 300ms
+Next element is available immediately after large consumer delay: kotlin.Unit
+Next element is ready in 100ms after consumer pause in 300ms: kotlin.Unit
+
+Process finished with exit code 0
+````
+
 ## Coroutine exception handling
 
 ## Shared mutable state and concurrency
