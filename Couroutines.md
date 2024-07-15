@@ -3271,6 +3271,40 @@ Process finished with exit code 0
 
 ## Coroutine exception handling
 
+- 취소된 코루틴은 `CancellationException`을 발생시킴
+
+### Exception propagation
+
+- `launch` 빌더 : 예외를 자동으로 전파
+    - root 코루틴 생성 시 예외를 **uncaught exception**으로 간주 (Java의 `Thread.uncatchExceptionHandler`와 유사)
+- `async`, `produce` 빌더 : 예외를 유저에게 노출
+    - 유저의 요청에 따라 예외를 처리
+    - `await()`, `receive()`로 최종 예외를 처리
+
+```kotlin
+import kotlinx.coroutines.*
+
+@OptIn(DelicateCoroutinesApi::class)
+fun main() = runBlocking {
+    val job = GlobalScope.launch { // root coroutine with launch
+        println("Throwing exception from launch")
+        throw IndexOutOfBoundsException() // Will be printed to the console by Thread.defaultUncaughtExceptionHandler
+    }
+    job.join()
+    println("Joined failed job")
+    val deferred = GlobalScope.async { // root coroutine with async
+        println("Throwing exception from async")
+        throw ArithmeticException() // Nothing is printed, relying on user to call await
+    }
+    try {
+        deferred.await()
+        println("Unreached")
+    } catch (e: ArithmeticException) {
+        println("Caught ArithmeticException")
+    }
+}
+```
+
 ## Shared mutable state and concurrency
 
 ## Select expression (experimental)
