@@ -3305,6 +3305,38 @@ fun main() = runBlocking {
 }
 ```
 
+### CoroutineExceptionHandler
+
+- `CoroutineExceptionHandler` 로 **uncaught exception** 에 대한 기존 동작 정의 가능
+- `CoroutineExceptionHandler` 에서는 예외로부터 복구 불가능
+- `CoroutineExceptionHandler` 가 호출되었다는 것은 이미 해당 예외로 코루틴이 완료된 상태라는 것
+- 예외를 로깅하고, 어플리케이션 종료/재시작 등에 사용 가능
+- `CoroutineExceptionHandler` 는 오직 **uncaught exception** 에 대해서만 호출됨
+    - **uncaught exception** : 예외를 처리하는 코드가 없는 상태의 예외
+
+```kotlin
+import kotlinx.coroutines.*
+
+suspend fun main() {
+    val handler = CoroutineExceptionHandler { _, exception ->
+        println("CoroutineExceptionHandler got $exception")
+    }
+    val job = GlobalScope.launch(handler) { // root coroutine, running in GlobalScope
+        throw AssertionError()
+    }
+    val deferred = GlobalScope.async(handler) { // also root, but async instead of launch
+        throw ArithmeticException() // Nothing will be printed, relying on user to call deferred.await()
+    }
+    joinAll(job, deferred)
+}
+```
+
+````
+CoroutineExceptionHandler got java.lang.AssertionError
+
+Process finished with exit code 0
+````
+
 ## Shared mutable state and concurrency
 
 ## Select expression (experimental)
