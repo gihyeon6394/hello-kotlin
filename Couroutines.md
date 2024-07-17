@@ -3337,6 +3337,83 @@ CoroutineExceptionHandler got java.lang.AssertionError
 Process finished with exit code 0
 ````
 
+### Cancellation and exceptions
+
+- 코루틴은 취소시 내부적으로 `CancellationException`을 발생시킴
+- `CancellationException`은 모든 핸들러를 무시
+- `Job.cancel` 로 취소하면 부모 코루틴 말고 자기만 취소됨
+- `CancellationException` 외의 예외가 발생하면 부모까지 취소시킴
+- 모든 childeren이 종료되면 부모가 예외를 핸들링 가능
+
+```kotlin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
+
+fun main() = runBlocking {
+    val job = launch {
+        val child = launch {
+            try {
+                delay(Long.MAX_VALUE)
+            } finally {
+                println("Child is cancelled")
+            }
+        }
+        yield()
+        println("Cancelling child")
+        child.cancel()
+        child.join()
+        yield()
+        println("Parent is not cancelled")
+    }
+    job.join()
+}
+```
+
+````
+Cancelling child
+Child is cancelled
+Parent is not cancelled
+
+Process finished with exit code 0
+````
+
+
+```kotlin
+val handler = CoroutineExceptionHandler { _, exception ->
+    println("CoroutineExceptionHandler got $exception")
+}
+val job2 = GlobalScope.launch(handler) {
+    launch { // the first child
+        try {
+            delay(Long.MAX_VALUE)
+        } finally {
+            withContext(NonCancellable) {
+                println("Children are cancelled, but exception is not handled until all children terminate")
+                delay(100)
+                println("The first child finished its non cancellable block")
+            }
+        }
+    }
+    launch { // the second child
+        delay(10)
+        println("Second child throws an exception")
+        throw ArithmeticException()
+    }
+}
+job2.join()
+```
+
+````
+Second child throws an exception
+Children are cancelled, but exception is not handled until all children terminate
+The first child finished its non cancellable block
+CoroutineExceptionHandler got java.lang.ArithmeticException
+
+Process finished with exit code 0
+````
+
 ## Shared mutable state and concurrency
 
 ## Select expression (experimental)
