@@ -3379,7 +3379,6 @@ Parent is not cancelled
 Process finished with exit code 0
 ````
 
-
 ```kotlin
 val handler = CoroutineExceptionHandler { _, exception ->
     println("CoroutineExceptionHandler got $exception")
@@ -3412,6 +3411,71 @@ The first child finished its non cancellable block
 CoroutineExceptionHandler got java.lang.ArithmeticException
 
 Process finished with exit code 0
+````
+
+### Exceptions aggregation
+
+- 여러 자식 코루틴이 예외를 발생하며 실패하면 먼저 발생한 예외가 전파되어서 핸들링 가능
+- 예외는 기본적으로 투명하고 래핑되지 않은 채로 전파됨
+
+```kotlin
+import kotlinx.coroutines.*
+import java.io.IOException
+
+@OptIn(DelicateCoroutinesApi::class)
+fun main() = runBlocking {
+    val handler = CoroutineExceptionHandler { _, exception ->
+        println("CoroutineExceptionHandler got $exception with suppressed ${exception.suppressed.contentToString()}")
+    }
+    val job = GlobalScope.launch(handler) {
+        launch {
+            try {
+                delay(Long.MAX_VALUE) // it gets cancelled when another sibling fails with IOException
+            } finally {
+                throw ArithmeticException() // the second exception
+            }
+        }
+        launch {
+            delay(100)
+            throw IOException() // the first exception
+        }
+        delay(Long.MAX_VALUE)
+    }
+    job.join()
+}
+```
+
+````
+CoroutineExceptionHandler got java.io.IOException with suppressed [java.lang.ArithmeticException]
+
+Process finished with exit code 0
+````
+
+```kotlin
+val handler = CoroutineExceptionHandler { _, exception ->
+    println("CoroutineExceptionHandler got $exception")
+}
+val job = GlobalScope.launch(handler) {
+    val innerJob = launch { // all this stack of coroutines will get cancelled
+        launch {
+            launch {
+                throw IOException() // the original exception
+            }
+        }
+    }
+    try {
+        innerJob.join()
+    } catch (e: CancellationException) {
+        println("Rethrowing CancellationException with original cause")
+        throw e // cancellation exception is rethrown, yet the original IOException gets to the handler  
+    }
+}
+job.join()
+```
+
+````
+Rethrowing CancellationException with original cause
+CoroutineExceptionHandler got java.io.IOException
 ````
 
 ## Shared mutable state and concurrency
