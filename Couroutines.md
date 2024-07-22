@@ -3478,6 +3478,134 @@ Rethrowing CancellationException with original cause
 CoroutineExceptionHandler got java.io.IOException
 ````
 
+### Supervision
+
+- unidirectional cancellation
+- e.g. UI 컴포넌트
+    - UI의 자식 태스크 중 하나가 취소되어도 모든 태스크를 종료시킬 필요는 없음
+    - 그러나 UI 컴포넌트가 사라지면, 자식 태스크도 종료되어야함
+- e.g. 서버 프로세스
+    - 여러개의 자식 job을 가지고 있을 때 job을 관리감독하면서, 취소된 job을 재실행해야함
+
+### Supervision job
+
+- `SupervisorJob` : `Job` 처럼 취소 예외가 발생하면 아래(자식)쪽으로 전파됨
+
+```kotlin
+import kotlinx.coroutines.*
+import kotlin.coroutines.coroutineContext
+
+suspend fun main() {
+    val supervisor = SupervisorJob()
+    with(CoroutineScope(coroutineContext + supervisor)) {
+        // launch the first child -- its exception is ignored for this example (don't do this in practice!)
+        val firstChild = launch(CoroutineExceptionHandler { _, _ -> }) {
+            println("The first child is failing")
+            throw AssertionError("The first child is cancelled")
+        }
+        // launch the second child
+        val secondChild = launch {
+            firstChild.join()
+            // Cancellation of the first child is not propagated to the second child
+            println("The first child is cancelled: ${firstChild.isCancelled}, but the second one is still active")
+            try {
+                delay(Long.MAX_VALUE)
+            } finally {
+                // But cancellation of the supervisor is propagated
+                println("The second child is cancelled because the supervisor was cancelled")
+            }
+        }
+        // wait until the first child fails & completes
+        firstChild.join()
+        println("Cancelling the supervisor")
+        supervisor.cancel()
+        secondChild.join()
+    }
+}
+```
+
+````
+The first child is failing
+Cancelling the supervisor
+The first child is cancelled: true, but the second one is still active
+The second child is cancelled because the supervisor was cancelled
+
+Process finished with exit code 0
+````
+
+### Supervision scope
+
+- `coroutineScope` 대신 `supervisorScope`을 사용해서 scoped concurrency를 사용할 수 있음
+- 취소되면 모든 자식이 취소됨
+- `couroutineScope` 처럼 모든 자식이 완료될되까지 기다림
+
+```kotlin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.yield
+
+suspend fun main() {
+    try {
+        supervisorScope {
+            val child = launch {
+                try {
+                    println("The child is sleeping")
+                    delay(Long.MAX_VALUE)
+                } finally {
+                    println("The child is cancelled")
+                }
+            }
+            // Give our child a chance to execute and print using yield
+            yield()
+            println("Throwing an exception from the scope")
+            throw AssertionError()
+        }
+    } catch (e: AssertionError) {
+        println("Caught an assertion error")
+    }
+}
+
+``` 
+
+````
+Throwing an exception from the scope
+The child is sleeping
+The child is cancelled
+Caught an assertion error
+
+Process finished with exit code 0
+````
+
+#### Exceptions in supervised coroutines
+
+- 자식의 예외가 부모에게 전파되지 않기 떄문에
+- 모든 자식들은 스스로 예외를 핸들링할 수 있음
+- `superviserScope` 에서 런칭된 코루틴으 `CoroutineExceptionHandler` 를 사용하여 예외를 핸들링 가능
+
+```kotlin
+val handler = CoroutineExceptionHandler { _, exception ->
+    println("CoroutineExceptionHandler got $exception")
+}
+supervisorScope {
+    val child = launch(handler) {
+        println("The child throws an exception")
+        throw AssertionError()
+    }
+    println("The scope is completing")
+}
+println("The scope is completed")
+```
+
+````
+The scope is completing
+The child throws an exception
+CoroutineExceptionHandler got java.lang.AssertionError
+The scope is completed
+
+Process finished with exit code 0
+````
+
 ## Shared mutable state and concurrency
 
 ## Select expression (experimental)
