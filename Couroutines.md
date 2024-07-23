@@ -3608,6 +3608,61 @@ Process finished with exit code 0
 
 ## Shared mutable state and concurrency
 
+- multi-threaded 디스패쳐를 사용해 병렬로 코루틴 실행 가능 `Dispatchers.Default`
+- **shared mutable state** (공유가변상태) 에 접근을 동기화해야하는 숙제
+- 멀티 스레드 환경에서 접하는 문제와 비슷함
+
+### The problem
+
+```kotlin
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlin.system.measureTimeMillis
+
+/**
+ * @author gihyeon-kim
+ */
+suspend fun main() {
+    var counter = 0
+
+    withContext(Dispatchers.Default) {
+        massiveRun {
+            counter++
+        }
+    }
+
+    println("Counter = $counter")
+}
+
+suspend fun massiveRun(action: suspend () -> Unit) {
+    val n = 100  // number of coroutines to launch
+    val k = 1000 // times an action is repeated by each coroutine
+    val time = measureTimeMillis {
+        coroutineScope { // scope for coroutines
+            repeat(n) {
+                launch {
+                    repeat(k) { action() }
+                }
+            }
+        }
+    }
+    println("Completed ${n * k} actions in $time ms")
+}
+```
+
+````
+Completed 100000 actions in 9 ms
+Counter = 42187
+
+Process finished with exit code 
+````
+
+- `counter` 의 기대값 : `100000`
+- 실제값 : `42187`
+- 100개의 코루틴이 공유변수 `counter`에 접근하면서 동시에 증가시키기 때문에 값이 제대로 증가하지 않음
+
 ## Select expression (experimental)
 
 ## Debug coroutines using IntelliJ IDEA - tutorial
