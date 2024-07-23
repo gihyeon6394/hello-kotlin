@@ -3621,9 +3621,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.system.measureTimeMillis
 
-/**
- * @author gihyeon-kim
- */
 suspend fun main() {
     var counter = 0
 
