@@ -3660,6 +3660,35 @@ Process finished with exit code
 - 실제값 : `42187`
 - 100개의 코루틴이 공유변수 `counter`에 접근하면서 동시에 증가시키기 때문에 값이 제대로 증가하지 않음
 
+### Volatiles are of no help
+
+- `volatile` : 변수를 캐싱하지 않고 메인 메모리에서 관리
+    - atomic하게 read/write 가능
+- 그러나 `counter++` 은 `read`, `increment`, `write` 세 단계로 이루어짐
+
+| coroutine 1 | coroutine 2 | counter |
+|-------------|-------------|---------|
+| read        |             | 0       |
+|             | read        | 0       |
+| increment   |             | 1       |
+|             | increment   | 1       |
+| write       |             | 1       |
+|             | write       | 1       |
+
+```kotlin
+@Volatile
+var counter = 0
+
+fun main() = runBlocking {
+    withContext(Dispatchers.Default) {
+        massiveRun {
+            counter++
+        }
+    }
+    println("Counter = $counter")
+}
+```
+
 ## Select expression (experimental)
 
 ## Debug coroutines using IntelliJ IDEA - tutorial
