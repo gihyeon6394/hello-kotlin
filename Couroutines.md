@@ -3689,6 +3689,31 @@ fun main() = runBlocking {
 }
 ```
 
+### Thread-safe data structures
+
+- thread-safe data structure (synchronized, linearizable, atomic) 사용
+- 공유 상태에서 동기화를 보장해줌
+- `AtomicInteger` : atomic하게 증가시킬 수 있는 정수형 변수
+- 단순한 작업 (증분, 감소)이 아닌 복잡한 작업에는 사용 불가
+
+```kotlin
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicInteger
+
+val counter = AtomicInteger()
+
+fun main() = runBlocking {
+    withContext(Dispatchers.Default) {
+        massiveRun {
+            counter.incrementAndGet()
+        }
+    }
+    println("Counter = $counter")
+}
+```
+
 ## Select expression (experimental)
 
 ## Debug coroutines using IntelliJ IDEA - tutorial

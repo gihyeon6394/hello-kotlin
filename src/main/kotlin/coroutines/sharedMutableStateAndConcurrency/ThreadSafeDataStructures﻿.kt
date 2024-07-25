@@ -1,21 +1,20 @@
-package coroutines.coroutineExceptionHandling
+package coroutines.sharedMutableStateAndConcurrency
 
-import coroutines.sharedMutableStateAndConcurrency.massiveRun
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * @author gihyeon-kim
  */
-@Volatile
-var counter = 0
+val counterAtomic = AtomicInteger()
 
 fun main() = runBlocking {
     withContext(Dispatchers.Default) {
         massiveRun {
-            counter++
+            counterAtomic.incrementAndGet()
         }
     }
-    println("Counter = $counter")
+    println("Counter = $counterAtomic")
 }
