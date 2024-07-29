@@ -3714,6 +3714,43 @@ fun main() = runBlocking {
 }
 ```
 
+### Thread confinement fine-grained
+
+- **Thread confinement** : 공유 상태에 대한 접근을 단일 스레드로 제한
+- UI 애플리케이션에서 UI 상태 접근/수정을 단일 스레드에게 제한하는 것과 유사
+- 코루틴에서 single-threaded context를 사용하여 thread confinement 가능
+
+```kotlin
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.newSingleThreadContext
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+
+val counterContext = newSingleThreadContext("CounterContext")
+var counter = 0
+
+fun main() = runBlocking {
+    withContext(Dispatchers.Default) {
+        massiveRun {
+            // confine each increment to a single-threaded context
+            withContext(counterContext) {
+                counter++
+            }
+        }
+    }
+    println("Counter = $counter")
+}
+```
+
+````
+Completed 100000 actions in 723 ms
+Counter = 100000
+
+Process finished with exit code 0
+````
+
+- multi-threaded `Dispatchers.Default` 에서 `newSingleThreadContext` 로 `counter` 변수에 접근
+
 ## Select expression (experimental)
 
 ## Debug coroutines using IntelliJ IDEA - tutorial
