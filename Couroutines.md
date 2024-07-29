@@ -3751,6 +3751,46 @@ Process finished with exit code 0
 
 - multi-threaded `Dispatchers.Default` 에서 `newSingleThreadContext` 로 `counter` 변수에 접근
 
+### Thread confinement coarse-grained
+
+- 실무에서는 아주 큰 청크를 작업함 e.g. 오래걸리는 비즈니스로직이 포함된 상태 변경을 싱글 스레드에 할당
+- 각 코루틴을 단일 스레드 컨텍스트에서 시작시킴
+
+```kotlin
+import kotlinx.coroutines.newSingleThreadContext
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+
+/**
+ * @author gihyeon-kim
+ */
+val counterContext = newSingleThreadContext("CounterContext")
+var counter = 0
+
+fun main() = runBlocking {
+    // confine everything to a single-threaded context
+    withContext(counterContext) {
+        massiveRun {
+            counter++
+        }
+    }
+    println("Counter = $counter")
+}
+
+```
+
+````
+Completed 100000 actions in 11 ms
+Counter = 100000
+
+Process finished with exit code 0
+````
+
+- 왜 fine-grained 보다 coarse-grained가 더 빠를까?
+    - fine-grained : 각 증가 연산이 새로운 스레드 (`counterContext`의 싱글 스레드)로 전환
+    - coarse-grained : 모든 증가 연산이 동일한 스레드 (`counterContext의 싱글 스레드)에서 실행
+    - context 전환 비용이 크기 때문에 coarse-grained가 더 빠름
+
 ## Select expression (experimental)
 
 ## Debug coroutines using IntelliJ IDEA - tutorial
