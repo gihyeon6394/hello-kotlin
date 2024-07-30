@@ -3791,6 +3791,41 @@ Process finished with exit code 0
     - coarse-grained : 모든 증가 연산이 동일한 스레드 (`counterContext의 싱글 스레드)에서 실행
     - context 전환 비용이 크기 때문에 coarse-grained가 더 빠름
 
+### Mutual exclusion
+
+- 상호배제 : 임계영역에 하나의 코루틴만 접근 가능
+    - 임계영역 : 공유 상태에 접근하는 코드 영역, 절대 동시에 실행되면 안됨
+- `synchronized` 키워드, `ReentrantLock` 클래스 사용 가능
+- 코루틴에서는 `Mutex` 클래스 사용
+    - `lock()`, `unlock()` 함수로 임계영역을 설정
+- `Mutex.lock()` 은 suspend 함수이기 때문에 스레드를 블로킹하지 않음
+- `withLock()` 확장함수로 `mutex.lock(); try { ... } finally { mutex.unlock() }` 패턴을 사용
+
+```kotlin
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+
+val mutex = Mutex()
+var counter = 0
+
+fun main() = runBlocking {
+    withContext(Dispatchers.Default) {
+        massiveRun {
+            // protect each increment with lock
+            mutex.withLock {
+                counter++
+            }
+        }
+    }
+    println("Counter = $counter")
+}
+```
+
+- fine-grained 이기 때문에 비쌈
+
 ## Select expression (experimental)
 
 ## Debug coroutines using IntelliJ IDEA - tutorial
