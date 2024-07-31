@@ -120,3 +120,78 @@ fun main() = runBlocking {
     }
 }
 ```
+
+```kotlin
+
+fun main() = runBlocking {
+    makeCoroutine()
+    notMakeCoroutine()
+}
+fun makeCoroutine() = runBlocking {
+    println("made coroutine")
+    delay(1000L)
+}
+
+suspend fun notMakeCoroutine() = coroutineScope {
+    println("not made coroutine")
+    delay(1000L)
+}
+```
+
+![img_3.png](img_3.png)
+
+![img_4.png](img_4.png)
+
+```kotlin
+private val context = Executors.newFixedThreadPool(2).asCoroutineDispatcher()
+
+fun demoWithCoroutineScope() = runBlocking {
+    (1..10).forEach {
+        launch(context) {
+            coroutineScope {
+                println("Start No.$it in coroutineScope on ${Thread.currentThread().name}")
+                delay(500)
+                println("End No.$it in coroutineScope on ${Thread.currentThread().name}")
+            }
+        }
+    }
+}
+
+fun demoWithRunBlocking() = runBlocking {
+    (1..10).forEach {
+        launch(context) {
+            runBlocking {
+                println("Start No.$it in runBlocking on ${Thread.currentThread().name}")
+                delay(500)
+                println("End No.$it in runBlocking on ${Thread.currentThread().name}")
+            }
+        }
+    }
+}
+
+```
+
+![img_1.png](img_1.png)
+
+1. demoWithCoroutineScope을 스레드 A, 코루틴 a로 실행 blocking. A-a binding
+2. 스레드 A, 코루틴 a에서 자식 코루틴 a-1 생성 후 coroutineScope 진입
+    1. coroutineScope에서 a가 delay (suspend), 스레드 A를 release
+3. 스레드 B, 코루틴 a의 자식 코루틴 a-2 생성 후 coroutineScope 진입
+    1. coroutineScope에서 a-2가 delay (suspend), 스레드 B를 release
+4. 스레드 B, 코루틴 a의 자식 코루틴 a-3 생성 후 coroutineScope 진입
+    1. coroutineScope에서 a-3이 delay (suspend), 스레드 B를 release
+       .... (반복)
+11. 2 에서 중지된 코루틴 a-1, 스레드 B에서 재개
+    ... (반복)
+
+![img_2.png](img_2.png)
+
+1. demoWithCoroutineScope을 스레드 A, 코루틴 a로 실행 blocking. A-a binding
+2. 스레드 A, 코루틴 a에서 자식 코루틴 a-1 생성 후 runBlocking에 진입 (이 때, 코루틴 a-1이 스레드 a에 바인딩되어 blocking)
+   => 즉 자식 코루틴 a-1이 완료될 떄까지 스레드 A를 release하지 않는다.
+3. 스레드 B, 코루틴 a의 자식 코루틴 a-2 생성 후 runBlocking에 진입 (이 때, 코루틴 a-2가 스레드 B에 바인딩되어 blocking)
+   => 즉 자식 코루틴 a-2가 완료될 떄까지 스레드 B를 release하지 않는다.
+4. 스레드가 총 2개라 다음 코루틴을 런칭할 수 없음
+5. 2에서 중지된 코루틴 a-1, 스레드 A에서 재개, 완료 후 스레드 A release
+6. 3에서 중지된 코루틴 a-2, 스레드 B에서 재개, 완료 후 스레드 B release
+7. ... (반복)
