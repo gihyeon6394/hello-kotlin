@@ -142,6 +142,8 @@ suspend fun notMakeCoroutine() = coroutineScope {
 
 ![img_4.png](img_4.png)
 
+![img_5.png](img_5.png)
+
 ```kotlin
 private val context = Executors.newFixedThreadPool(2).asCoroutineDispatcher()
 

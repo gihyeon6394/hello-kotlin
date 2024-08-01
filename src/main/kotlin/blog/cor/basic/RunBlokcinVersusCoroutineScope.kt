@@ -42,7 +42,7 @@ fun demoWithCoroutineScope() = runBlocking {
         launch(context) {
             coroutineScope {
                 println("Start No.$it in coroutineScope on ${Thread.currentThread().name}")
-                delay(500) // 스레드를 릴리즈해줘 다른 코루틴을 실행가능하게 한다.
+                delay(500) // 코루틴 suspend
                 println("End No.$it in coroutineScope on ${Thread.currentThread().name}")
             }
         }
@@ -52,9 +52,9 @@ fun demoWithCoroutineScope() = runBlocking {
 fun demoWithRunBlocking() = runBlocking {
     (1..10).forEach {
         launch(context) {
-            runBlocking {
+            runBlocking { // 현재 스레드를 blocking (코루틴을 현재 스레드에 반인딩)
                 println("Start No.$it in runBlocking on ${Thread.currentThread().name}")
-                delay(500)
+                delay(500) // 코루틴 suspend
                 println("End No.$it in runBlocking on ${Thread.currentThread().name}")
             }
         }
