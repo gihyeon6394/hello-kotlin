@@ -3890,7 +3890,73 @@ fizz -> 'Fizz'
 Process finished with exit code 0
 ````
 
-### Selecting from channels
+### Selecting on close
+
+- `select`의 `onReceive` : `select` 하다가 예외가 발생하면 `onReceive` 실패
+- `onReceiveCatching` : 채널이 닫혔을 때 특정 액션 추가
+
+```kotlin
+package coroutines.selectExpression
+
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.produce
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.selects.select
+
+@OptIn(ExperimentalCoroutinesApi::class)
+fun main() = runBlocking {
+    val a = produce {
+        repeat(4) { send("Hello $it") }
+    }
+    val b = produce {
+        repeat(4) { send("World $it") }
+    }
+    repeat(8) { // print first eight results
+        println(selectAorB(a, b))
+    }
+    coroutineContext.cancelChildren()
+}
+
+suspend fun selectAorB(a: ReceiveChannel<String>, b: ReceiveChannel<String>): String =
+    select {
+        a.onReceiveCatching {
+            val value = it.getOrNull()
+            if (value != null) {
+                "a -> '$value'"
+            } else {
+                "Channel 'a' is closed"
+            }
+        }
+        b.onReceiveCatching {
+            val value = it.getOrNull()
+            if (value != null) {
+                "b -> '$value'"
+            } else {
+                "Channel 'b' is closed"
+            }
+        }
+    }
+```
+
+````
+a -> 'Hello 0'
+a -> 'Hello 1'
+b -> 'World 0'
+a -> 'Hello 2'
+a -> 'Hello 3'
+b -> 'World 1'
+Channel 'a' is closed
+Channel 'a' is closed
+
+Process finished with exit code 0
+````
+
+- `select` 는 첫번째 절을 우선시함
+    - 동시에 select이 가능하면 첫번째 절을 선택
+    - 위에서 `a` 가 계속 보내다가 `send` 중 suspend 되어 `b` 가 먼저 보내게 됨
+- `onReceiveCatching` : 채널이 닫혔을 때 즉시 select 됨
 
 ## Debug coroutines using IntelliJ IDEA - tutorial
 
