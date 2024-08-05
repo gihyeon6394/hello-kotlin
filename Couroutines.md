@@ -3958,6 +3958,59 @@ Process finished with exit code 0
     - 위에서 `a` 가 계속 보내다가 `send` 중 suspend 되어 `b` 가 먼저 보내게 됨
 - `onReceiveCatching` : 채널이 닫혔을 때 즉시 select 됨
 
+### Selecting to send
+
+- `onSend` 절 : 채널에 값을 보내는 것을 select 가능
+- 아래는 primary channel이 안될때, side channel로 보내는 예제
+
+```kotlin
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.channels.produce
+import kotlinx.coroutines.selects.select
+
+fun main() = runBlocking {
+    val side = Channel<Int>() // allocate side channel
+    launch { // this is a very fast consumer for the side channel
+        side.consumeEach { println("Side channel has $it") }
+    }
+    produceNumbers(side).consumeEach {
+        println("Consuming $it")
+        delay(250) // let us digest the consumed number properly, do not hurry
+    }
+    println("Done consuming")
+    coroutineContext.cancelChildren()
+}
+
+fun CoroutineScope.produceNumbers(side: SendChannel<Int>) = produce<Int> {
+    for (num in 1..10) { // produce 10 numbers from 1 to 10
+        delay(100) // every 100 ms
+        select {
+            onSend(num) {} // Send to the primary channel
+            side.onSend(num) {} // or to the side channel
+        }
+    }
+}
+```
+
+````
+Consuming 1
+Side channel has 2
+Side channel has 3
+Consuming 4
+Side channel has 5
+Side channel has 6
+Consuming 7
+Side channel has 8
+Side channel has 9
+Consuming 10
+Done consuming
+
+Process finished with exit code 0
+````
+
 ## Debug coroutines using IntelliJ IDEA - tutorial
 
 ## Debug Kotlin Flow using IntelliJ IDEA - tutorial
