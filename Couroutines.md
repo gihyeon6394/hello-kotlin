@@ -4011,6 +4011,47 @@ Done consuming
 Process finished with exit code 0
 ````
 
+### Selecting deferred values
+
+- `onAwait` 절 : deferred 값을 기다릴 수 있음
+
+```kotlin
+import kotlinx.coroutines.*
+import kotlinx.coroutines.selects.select
+import kotlin.random.Random
+
+fun main() = runBlocking {
+    val list = asyncStringsList()
+    val result = select {
+        list.withIndex().forEach { (index, deferred) ->
+            deferred.onAwait { answer ->
+                "Deferred $index produced answer '$answer'"
+            }
+        }
+    }
+    println(result)
+    val countActive = list.count { it.isActive }
+    println("$countActive coroutines are still active")
+}
+
+fun CoroutineScope.asyncStringsList(): List<Deferred<String>> {
+    val random = Random(3)
+    return List(12) { asyncString(random.nextInt(1000)) }
+}
+
+fun CoroutineScope.asyncString(time: Int) = async {
+    delay(time.toLong())
+    "Waited for $time ms"
+}
+```
+
+````
+Deferred 6 produced answer 'Waited for 43 ms'
+11 coroutines are still active
+
+Process finished with exit code 0
+````
+
 ## Debug coroutines using IntelliJ IDEA - tutorial
 
 ## Debug Kotlin Flow using IntelliJ IDEA - tutorial
