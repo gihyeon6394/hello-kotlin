@@ -4122,4 +4122,37 @@ Process finished with exit code 0
 
 ## Debug coroutines using IntelliJ IDEA - tutorial
 
+### Create coroutines
+
+```kotlin
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
+
+fun main() = runBlocking { // coroutine으로 wrapping
+    println("Hello, World!")
+
+    val a = async { // deffered value 6을 반환하는 코루틴 생성
+        println("I'm computing part of the answer")
+        6
+    }
+
+    val b = async {// deffered value 7을 반환하는 코루틴 생성
+        println("I'm computing the other part of the answer")
+        7
+    }
+    println("The answer is ${a.await() * b.await()}")
+}
+
+```
+
+````
+Hello, World!
+I'm computing part of the answer
+I'm computing the other part of the answer
+The answer is 42
+
+Process finished with exit code 0
+````
+
+
 ## Debug Kotlin Flow using IntelliJ IDEA - tutorial
