@@ -4167,4 +4167,12 @@ Process finished with exit code 0
 - `coroutine:1` `SUSPENDED` : `coroutine:2`, `coroutine:3` 을 기다리고 있음
 - `coroutine:3` `RUNNING` : `coroutine:3` 가 실행중
 
+### Optimized-out variables
+
+- `suspend` function을 사용하다보면 디버거에서 `was optimized out` 이라고 표시되는 변수들이 있음
+- 해당 변수의 lifetime이 끝나면서 메모리에서 해제되어서 그럼
+- `-Xdebug` 옵션을 사용하면 최적화를 하지 않음
+  - 절대 사용하지 말것
+  - 메모리 릭 유발
+
 ## Debug Kotlin Flow using IntelliJ IDEA - tutorial
