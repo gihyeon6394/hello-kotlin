@@ -4154,5 +4154,17 @@ The answer is 42
 Process finished with exit code 0
 ````
 
+### Debug coroutines
+
+![img_16.png](img_16.png)
+
+- `coroutine:1` `SUSPENDED` : `coroutine:2`, `coroutine:3` 을 기다리고 있음
+- `coroutine:2` `RUNNING` : `coroutine:2` 가 실행중
+- `coroutine:3` `CREATED` : `coroutine:3` 가 생성되었지만 실행되지 않음
+
+![img_17.png](img_17.png)
+
+- `coroutine:1` `SUSPENDED` : `coroutine:2`, `coroutine:3` 을 기다리고 있음
+- `coroutine:3` `RUNNING` : `coroutine:3` 가 실행중
 
 ## Debug Kotlin Flow using IntelliJ IDEA - tutorial
