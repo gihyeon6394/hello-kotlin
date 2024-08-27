@@ -7,6 +7,12 @@ import kotlin.system.measureTimeMillis
  * @author gihyeon-kim
  */
 
+/**
+ * solutionFineGrained 보다 solutionCoarseGrained가 더 빠르다.
+ *
+ * - solutionFineGrained 은 100번의 스레드 문맥교환이 발생한다 (멀티 스레드 -> 싱글 스레드)
+ * - solutionCoarseGrained 는 1번의 스레드 문맥교환이 발생한다 (멀티 스레드 -> 싱글 스레드)
+ */
 fun main() = runBlocking {
     solutionFineGrained()
     solutionCoarseGrained()
@@ -18,8 +24,9 @@ suspend fun solutionFineGrained() {
 
     withContext(Dispatchers.Default) {
         massiveRun {
+            // 스레드 문맥 교환
             withContext(counterContext) {
-                counter++
+                counter++ // 크리티컬 섹션이자 오래걸리는 비즈니스 로직
             }
         }
     }
@@ -31,7 +38,7 @@ suspend fun solutionCoarseGrained() {
 
     withContext(counterContext) {
         massiveRun {
-            counter++
+            counter++ // 크리티컬 섹션이자 오래걸리는 비즈니스 로직
         }
     }
 }
