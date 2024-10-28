@@ -26,7 +26,7 @@ suspend fun solutionFineGrained() {
         massiveRun {
             // 스레드 문맥 교환
             withContext(counterContext) {
-                counter++ // 크리티컬 섹션이자 오래걸리는 비즈니스 로직
+                counter++
             }
         }
     }
@@ -38,7 +38,7 @@ suspend fun solutionCoarseGrained() {
 
     withContext(counterContext) {
         massiveRun {
-            counter++ // 크리티컬 섹션이자 오래걸리는 비즈니스 로직
+            counter++
         }
     }
 }
