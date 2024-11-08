@@ -1,9 +1,6 @@
 package coroutines.myself.basics
 
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.newSingleThreadContext
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 
 /**
  * @author gihyeon-kim
@@ -12,12 +9,15 @@ import kotlinx.coroutines.runBlocking
 val dispatcherSingleThread = newSingleThreadContext("myThread")
 
 fun main() = runBlocking(dispatcherSingleThread) {
-//    fuRunBlocking()
-    fuCoroutineScope()
+    launch {
+//        fuRunBlocking()
+        fuCoroutineScope()
+    }
+    delay(300L)
     println("Hello,")
 }
 
-fun fuRunBlocking() = runBlocking {
+suspend fun fuRunBlocking() = runBlocking {
     delay(1000L)
     println("World!")
 }
