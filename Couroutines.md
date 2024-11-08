@@ -36,7 +36,7 @@ reference : https://kotlinlang.org/docs/coroutines-guide.html
 
 - **coroutine** : 중지가능한 연산을 하는 인스턴스
 - 스레드와 비슷한 면 : 실행중인 코드 block 가능
-- 코루틴은 스레드와 다름 : 스레드 안에서 중지 가능하고 다른 스레드에서 계속할 수 있다.
+- 코루틴은 스레드와 다름 : 중지된 코루틴은 다른 스레드에서 계속 될 수 있음
 
 ```kotlin
 import kotlinx.coroutines.delay
@@ -59,25 +59,30 @@ World!
 ```
 
 - `launch` : 코루틴 빌더
-    - 새로운 코루틴을 시작하고 실행한다.
+    - 새로운 코루틴을 시작 (런치)하고 실행한다.
 - `delay` : 일시 중지 함수 (suspend function)
     - 코루틴을 특정 시간동안 중지
 - `runBlocking` : 실행 중인 스레드 (`fun main()`)가 blocked
     - non coroutines world (`fun main()`)과 연결
     - 없이 `launch`를 사용하면 에러 발생 `Unresolved reference: launch`
+    - `{}` 안에서 런치된 모든 코루틴이 종료될 떄까지 해당 스레드는 block
+    - 주로 top-level 코드에서 사용 (application 시작 코드)
+- suspending coroutine (코루틴 중지) 는 스레드를 블로킹 하지 않으며, 다른 코루틴을 실행할 수 있게 양보
 
 #### Structured concurrency
 
-- Structured concurrency : 새로운 코루틴은 CoroutineScope에서만 launch 가능
+- Structured concurrency : 반드시 CoroutineScope 안에서 코루틴을 런치해야한다
 - CoroutineScope : 코루틴의 lifecycle, scope을 관리하는 인터페이스
 - 위에서는 `runBlocking` 으로 새로운 CoroutineScope를 만들었다.
 - CoroutineScope은 자식 코루틴들이 완료되기 전까지 실행을 끝내지 않는다.
+- 장점
+    - 코루틴 누수 방지 : 자식 코루틴이 모두 종료될떄까지 부모 코루틴이 종료되지 않음
+    - 에러 리포트 : 자식 코루틴이 예외를 던지면 부모 코루틴이 예외를 받아서 처리
 
 ### Extract function refactoring
 
 - `launch` 를 별도의 함수로 추출
 - `suspend` modifier : suspending function을 선언
-    - suspending function : 코루틴 안에서 사용 가능한 함수이지만, 코루틴 중지 가능
 - **suspending function** : 코루틴을 중지 가능한 함수 (코루틴 안에서 사용)
 
 ```kotlin
@@ -99,12 +104,12 @@ suspend fun doWorld() {
 
 ### Scope builder
 
-- `coroutineScope` : 코루틴을 실행하는 블록을 만들어주는 함수
+- `coroutineScope` builder : 코루틴 스코프를 생성하고, 스코프 안에서 생성된 자식 코루틴이 완료될때까지 완료되지 않음
 
-|     | `runBlocking`                      | `coroutineScope`                       |
-|-----|------------------------------------|----------------------------------------|
-| 공통점 | 코루틴을 실행하는 블록, children이 완료될떄까지 기다림 | 코루틴을 실행하는 블록, children이 완료될때까지 기다림     |
-| 차이점 | 실행 중인 스레드를 block                   | 중지하고, thread 를 release하고, 다시 시작할 수 있다. |
+|     | `runBlocking`                      | `coroutineScope`                   |
+|-----|------------------------------------|------------------------------------|
+| 공통점 | 코루틴을 실행하는 블록, children이 완료될떄까지 기다림 | 코루틴을 실행하는 블록, children이 완료될때까지 기다림 |
+| 차이점 | 실행 중인 스레드를 block                   | suspending function                |
 
 ```kotlin
 fun main() = runBlocking {
@@ -4172,7 +4177,7 @@ Process finished with exit code 0
 - `suspend` function을 사용하다보면 디버거에서 `was optimized out` 이라고 표시되는 변수들이 있음
 - 해당 변수의 lifetime이 끝나면서 메모리에서 해제되어서 그럼
 - `-Xdebug` 옵션을 사용하면 최적화를 하지 않음
-  - 절대 사용하지 말것
-  - 메모리 릭 유발
+    - 절대 사용하지 말것
+    - 메모리 릭 유발
 
 ## Debug Kotlin Flow using IntelliJ IDEA - tutorial
