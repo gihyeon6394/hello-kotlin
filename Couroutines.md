@@ -1037,8 +1037,8 @@ main: Now I can quit.
 
 - 코루틴은 cooperative하게 취소됨
 - `kotlinx.coroutines` 의 모든 suspeding function은 취소 가능
-- 코루틴 취소를 체크하다 `CancellationException`을 던지고, 취소시킴
-- 코루틴 연산을 하고있어서, 취소 체크를 안하고 있다면 취소 불가능
+- 코루틴 취소를 체크하다 취소되면, throw `CancellationException`
+- 코루틴이 연산을 계속하면서 취소 체크를 안하고 있다면 취소 불가능
 
 ````kotlin
 val startTime = System.currentTimeMillis()
@@ -1070,7 +1070,6 @@ main: Now I can quit.
 ````
 
 - `job.cancelAndJoin()` : `cancel()`과 `join()`을 합친 함수
-- "I'm sleeping" 일때 취소가 불가능함
 
 ```kotlin
 val job = launch(Dispatchers.Default) {
@@ -1091,11 +1090,11 @@ job.cancelAndJoin() // cancels the job and waits for its completion
 println("main: Now I can quit.")
 ```
 
-- `try-catch` 블록을 사용하여 `CancellationException`을 catch하면서 취소가 불가능해짐
+- `try-catch` 블록을 사용하여 `CancellationException`을 catch해버리면 취소되지 않음
 
 ### Making computation code cancellable
 
-- 취소 가능한 코드를 작성하는 방법
+- 취소 가능한 코루틴 코드를 작성하는 방법
 - 방법 1. 주기적으로 cancellation check
     - `yield()` 를 활용
 - 방법 2. 명시적으로 취소 상태를 확인
@@ -1162,6 +1161,8 @@ main: Now I can quit.
 
 ### Run non-cancellable block
 
+- `finally{}` 에서 suspending function을 호출하려하면 다시 `CancellationException`을 던짐
+    - 현재 코루틴이 이미 cancel되었기 때문
 - `withContext(NonCancellable)` : 취소 불가능한 블록을 실행
 - 아주 드문 케이스로 취소 불가능한 블록을 실행해야할때 사용
 
@@ -1246,6 +1247,9 @@ Result is null
 
 ### Asynchronous timeout and resources
 
+- timeout 이벤트는 비동기로 발생함
+    - 즉, `withTimeout{}` 반환 직전에도 발생이 가능함
+    - 리소스 생성 후 타임아웃 이벤트가 발생했으면, 리소스 헤제를 반드시할 수 있게 `finally` 블록을 사용해야함
 - `withTimeout` 을 사용했고, 블록 내에서 리소스를 사용하는 경우 블록 밖에서 리소스를 해제
 - 아래 코드에서 리소스 누수는 없음
 
