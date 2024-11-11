@@ -17,7 +17,8 @@ fun main() = runBlocking(dispatcherSingleThread) {
     println("Hello,")
 }
 
-suspend fun fuRunBlocking() = runBlocking {
+// delay 로 코루틴을 중지시켜도 runBlocking 블럭 안에서 실행되기 때문에 현재 스레드를 블로킹한다
+fun fuRunBlocking() = runBlocking {
     delay(1000L)
     println("World!")
 }
