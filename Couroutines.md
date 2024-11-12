@@ -1344,13 +1344,13 @@ The answer is 42
 Completed in 2017 ms
 ````
 
-- 코루틴의 코드는 기본적으로 regular code처럼 sequential하게 실행됨
+- 코루틴의 코드는 기본적으로 sequential하게 실행됨
 
 ### Concurrent using async
 
 - 각 suspending function을 `async`로 감싸면 concurrent하게 실행됨
-- `async` : `launch`와 비슷
-    - `launch` : 결과를 반환하지 않음
+- `async` : `launch`와 비슷, 새로운 코루틴에서 시작
+    - `launch` : `Job`을 반환하고, 그 안에는 결과가 없음
     - `async` : 결과 `Deferred`를 반환
 - `Deferred` : light-weight non-blocking future
     - `Deferred.await()` : 결과를 반환
@@ -1465,6 +1465,8 @@ Completed in 1017 ms
 ````
 
 #### cancelling 전파
+
+- 자식이 취소되면 형제와 부모가 모두 취소됨 (전파)
 
 ```kotlin
 import kotlinx.coroutines.*
