@@ -1545,17 +1545,17 @@ newSingleThreadContext: I'm working in thread MyOwnThread
     - main thread에서 실행
 - `Dispatchers.Default` : 공유 백그라운드 스레드 풀에서 실행
 - `newSingleThreadContext` : 새로운 스레드를 생성
+    - 해당 블럭의 코루틴만을 위한 헌신적인 스레드는 매우 비싼 자원임 (반드시 다 썼으면 release)
 
 ### Unconfined vs confined dispatcher
 
 - `Dispathcers.Unconfined` : 코루틴이 시작되는 스레드에서 실행
-    - 첫번쨰 suspension point에서 다른 스레드로 전환됨
-    - 중지되면, suspending function을 호출한 스레드에서 재개
+    - 첫번쨰 suspension point 까지만 시작 스레드가 실행
+    - 재개할때는 suspending function을 호출한 스레드에서 실행
     - 적합 : CPU 시간을 많이 소모하지 않고, 공유 데이터를 변경하지 않는 경우
     - 자주 사용되지 않음
-- `Dispatchers.Default` : 바깥 `CoroutineScope`의 context를 상속
-    - `runBlocking` 하면 호출한 thread에서만 실행됨
-    - FIFO 스케줄링
+- 그 외 디스패쳐들은 기본적으로 바깥 `CoroutineScope` 을 상속
+    - `runBlocking`의 기본 디스패쳐는 호출 스레드로 디스패처를 한정지음
 
 ````kotlin
 launch(Dispatchers.Unconfined) { // not confined -- will work with main thread
