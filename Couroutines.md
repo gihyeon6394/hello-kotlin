@@ -1549,7 +1549,7 @@ newSingleThreadContext: I'm working in thread MyOwnThread
 
 ### Unconfined vs confined dispatcher
 
-- `Dispathcers.Unconfined` : 코루틴이 시작되는 스레드에서 실행
+- `Dispathcers.Unconfined` : 코루틴 시작을 호출한 스레드에서 실행
     - 첫번쨰 suspension point 까지만 시작 스레드가 실행
     - 재개할때는 suspending function을 호출한 스레드에서 실행
     - 적합 : CPU 시간을 많이 소모하지 않고, 공유 데이터를 변경하지 않는 경우
@@ -1628,7 +1628,7 @@ import kotlinx.coroutines.withContext
 fun main() {
     newSingleThreadContext("Ctx1").use { ctx1 ->
         newSingleThreadContext("Ctx2").use { ctx2 ->
-            runBlocking(ctx1) { // context 명시
+            runBlocking(ctx1) { // context 명시 + 코루틴 launch
                 log("Started in ctx1")
                 withContext(ctx2) { // context 변경
                     log("Working in ctx2")
@@ -1678,11 +1678,10 @@ fun main() {
 
 ### Children of a coroutine
 
-- `CoroutineScope`으로 코루틴을 시작할때, `CoroutineScope.coroutineContext`에 `Job`이 포함됨
-- 부모 코루틴의 `Job`은 자식 코루틴의 `Job`을 포함
+- 코루틴이 시작되면, `CoroutineScope.coroutineContext`를 통해 컨텍스트를 상속 받고, 새로운 코루틴의 `Job`과 부모-자식 관계가 성립됨
 - 코루틴이 취소되면 자식 코루틴도 취소됨
 - 명시적으로 부모-자식 관계를 무시(취소)하는 방법
-    - 방법 1. 서로 다른 scope을 코루틴 런치 시 사용 (e.g. `GlobalScope.launch`)
+    - 방법 1. 코루틴 런치 시 명시적으로 다른 스코프 사용 (e.g. `GlobalScope.launch`)
     - 방법 2. 코루틴 런치시 context 파라미터로 다른 `Job` 오브젝트 사용
         - 해당 `Job` 의 부모를 상속받음
 
@@ -1774,10 +1773,10 @@ log("The answer for v1 * v2 = ${v1.await() * v2.await()}")
 
 ### Combining context elements
 
-- `+` 연산자로 `CoroutineContext`를 합칠 수 있음
+- `+` 연산자로 `CoroutineContext`의 요소를 결합
 
 ````kotlin
-launch(Dispatchers.Default + CoroutineName("test")) {
+launch(Dispatchers.Default + CoroutineName("test")) { // Default dispatcher + named coroutine
     println("I'm working in thread ${Thread.currentThread().name}")
 }
 ````
@@ -1825,7 +1824,7 @@ fun main() = runBlocking {
 
 - 코루틴 간에 스레드-로컬 데이터를 전달하는 방법
 - `ThreadLocal` : `asContextElement` 확장 함수를 사용하여 `CoroutineContext`에 추가
-    - 주어진 `ThreadLocal` 을 저장하고 코루틴이 실행될때 값을 복원
+    - 주어진 `ThreadLocal` 에 값을 저장하고, context가 변경될때마다 값을 복사
 - `ensuerPresent` : `ThreadLocal` 값이 존재하는지 확인
 - `ThreadLocal` 값이 변해도 새로운 값이 코루틴 호출자에게 전파되지 않음
     - context element가 모든 ThreadLocal Object를 추적할 수 없기 때문
@@ -1858,7 +1857,7 @@ Post-main, current thread: Thread[main,5,main], thread local value: 'main'
 
 - 별도의 `Dispatchers.Default` 풀에서 코루틴 런치
     - `threadLocal.asContextElement(value = "launch")` 로 `ThreadLocal` 값을 설정
-    - 해당 풀에서 어떤 코루틴이 실행되건 `ThreadLocal` 값이 유지됨
+    - 해당 코루틴을 어느 스레드에서 실행하건 `ThreadLocal` 값이 유지됨
 
 ## Asynchronous Flow
 
