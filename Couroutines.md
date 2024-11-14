@@ -1909,6 +1909,8 @@ fun main() = runBlocking<Unit> {
 - stream의 value들이 비동기적으로 연산될 수 있다면 `Flow<Int>`를 사용
 - `flow { ...}` 빌더를 사용하여 flow를 생성
 - 람다 안의 코드는 suspending function
+- `emit()` : flow의 값을 emit
+- `collect()` : flow의 값을 소비
 
 ```kotlin
 fun simple() = flow { // flow builder
@@ -1947,6 +1949,7 @@ I'm not blocked 3
 - `flow` 빌더 안의 코드들이 `collect` 함수가 호출될때 실행됨
 
 ```kotlin
+// simple()은 suspend 제어자가 필요 없다. 실행해도 즉시 결과를 반환하고, flow의 람다는 lazy하게 실행되기 떄문ㅇ
 fun simple(): Flow<Int> = flow {
     println("Flow started")
     for (i in 1..3) {
@@ -1982,7 +1985,7 @@ Flow started
 ### Flow cancellation basics
 
 - Flow는 기본 cooperative cancellation을 지원
-- suspending funciton에서 `cancel`되면 flow는 취소된다. e.g. `delay`
+- suspending function 안에서 코루틴이 취소되면 flow 취소됨 
 
 ```kotlin
 import kotlinx.coroutines.withTimeoutOrNull
@@ -2023,9 +2026,9 @@ Done
 
 ### Intermediate flow operators
 
-- intermediate operator : flow를 변환하거나, 다른 flow를 반환
+- intermediate operator : flow를 변환하거나, 다른 flow로 변환
 - `map`, `filter`, ...
-- 시퀀스와 다른점 : operator 안의 코드가 suspending function일 수 있음
+- 시퀀스와 다른점 : operator 람다 안에서 suspending function 호출 가능
 
 ```kotlin
 import kotlinx.coroutines.delay
@@ -2053,7 +2056,8 @@ response 3
 
 #### Transform operator
 
-- `transform` : 각 요소를 변환하고, 새로운 flow를 반환
+- `transform` : flow의 요소를 임의 값, 횟수만큼 emit 가능
+- 가장 일반적인 transform operator
 
 ````kotlin
 (1..3).asFlow() // a flow of requests
@@ -2075,8 +2079,8 @@ response 3
 
 #### Size-limiting operator
 
-- `take` 처럼 limit에 도달하면 flow 실행 취소
-- 코루틴의 취소는 항상 예외로부터 가능
+- limit에 도달하면 flow 실행 취소
+- flow가 취소되면 flow를 실행하던 코루틴이 취소되므로, 반드시 `finally{}` 에서 자원 반납
 
 ```kotlin
 fun numbers(): Flow<Int> = flow {
@@ -2108,7 +2112,7 @@ Finally in numbers
 - flow의 terminal operation은 **suspending function**
 - `collect` : flow를 실행하고, 각 요소를 처리
 - `toList`, `toSet` : flow를 리스트나 셋으로 변환
-- `first`, `single` : 첫번째 요소나 유일한 요소를 반환
+- `first` : 첫번째 요소 반환
 - `reduce`, `fold` : flow의 요소를 하나의 값으로 축소
 
 ```kotlin
@@ -2161,8 +2165,8 @@ Process finished with exit code 0
 
 ### Flow context
 
-- flow 컬렉션은 항상 코루틴 컨텍스트에서 실행됨
-- **context preservation** : flow의 연산은 flow의 context에서 실행되는 성격
+- flow 컬렉션의 컨텍스트는 항상 호출한 코루틴의 컨텍스트에서 실행됨
+- **context preservation**
 
 ```kotlin
 withContext(context) {
@@ -2197,8 +2201,8 @@ fun main() = runBlocking<Unit> {
 
 #### A common pitfall when using withContext
 
-- `withContext`를 사용하여 컨텍스트 변경 가능
-- 하지만 flow 빌더는 context preservation의 주인이어야함, `emit()` 을 다른 컨텍스트에서 호출하면 안됨
+- 코루틴에서는 `withContext`를 사용하여 컨텍스트 변경 가능
+- 하지만 flow 빌더는 context preservation을 지켜야하므로 다른 컨텍스트에서 `emit()` 하지 못함
 
 ```kotlin
 fun simpleDifferentContext(): Flow<Int> = flow {
@@ -2227,7 +2231,6 @@ Exception in thread "main" java.lang.IllegalStateException: Flow invariant is vi
 #### flowOn operator
 
 - `flowOn` : flow의 context를 변경
-- 다른 코루틴을 생성해서 flow의 연산을 다른 context에서 실행
 
 ```kotlin
 fun simple(): Flow<Int> = flow {
