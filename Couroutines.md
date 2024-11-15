@@ -1951,12 +1951,12 @@ I'm not blocked 3
 ```kotlin
 // simple()은 suspend 제어자가 필요 없다. 실행해도 즉시 결과를 반환하고, flow의 람다는 lazy하게 실행되기 떄문ㅇ
 fun simple(): Flow<Int> = flow {
-    println("Flow started")
-    for (i in 1..3) {
-        delay(100)
-        emit(i)
+        println("Flow started")
+        for (i in 1..3) {
+            delay(100)
+            emit(i)
+        }
     }
-}
 
 fun main() = runBlocking<Unit> {
     println("Calling simple function...")
@@ -1985,7 +1985,7 @@ Flow started
 ### Flow cancellation basics
 
 - Flow는 기본 cooperative cancellation을 지원
-- suspending function 안에서 코루틴이 취소되면 flow 취소됨 
+- suspending function 안에서 코루틴이 취소되면 flow 취소됨
 
 ```kotlin
 import kotlinx.coroutines.withTimeoutOrNull
@@ -2259,7 +2259,8 @@ fun main() = runBlocking<Unit> {
 
 ### Buffering
 
-- flow의 일부를 서로 다른 코루틴에서 실행
+- flow의 일부를 다른 코루틴에서 실행
+- 매우 큰 작업을 비동기로 분리할 떄 유용
 
 ```kotlin
 fun simple3(): Flow<Int> = flow {
@@ -2308,11 +2309,11 @@ println("Collected in $timeBuffer ms")
 Collected in 1039 ms
 ````
 
-- `buffer` operator를 사용하여 flow를 concurrent하게 실행
+- `buffer` operator를 사용해 emit 코루틴, collect 코루틴을 분리
 
 ### Conflaction
 
-- `conflate` operator : flow 요소를 처리하던 중 다음 요소가 이미 emit되었을때, 이전 요소를 무시
+- `conflate` operator : flow의 값을 버퍼링하지 않고, 가장 마지막에 emit된 값만 처리
 
 ```kotlin
 val timeConflate = measureTimeMillis {
@@ -2332,12 +2333,9 @@ println("Collected in $timeConflate ms")
 Collected in 713 ms
 ````
 
-- flow 2번쨰가 실행되는 순간에 3번쨰가 끝나니 2번쨰는 무시됨
-
 #### Processing the latest value
 
-- 새로운 값이 emit 될때마다 이전 값을 무시하고 최신 값을 처리
-- `xxxLatest` operator : 최신 값을 처리하고, 이전 값을 무시
+- 새로운 값이 emmit 될떄마다 collector의 block을 취소하고 재시작
 
 ```kotlin
 val timeCollectLatest = measureTimeMillis {
@@ -2389,7 +2387,8 @@ Process finished with exit code 0
 
 #### Combine
 
-- `combine` operator : 두 flow의 최신 값을 결합
+- `zip`은 결합된 두 flow가 새로운 값을 emit하는 시점마다 결합
+- `combine` operator : 두 flow 중 하나가 새로운 값을 emit할 때마다 결합
 - e.g. flow의 각 숫자가 300ms마다 수정되고, 문자열이 400ms마다 수정되면,
     - `zip` 은 400ms마다 값을 출력
     - `combine` 은 300ms마다 값을 출력
@@ -2460,7 +2459,7 @@ fun main() {
 #### flatMapConcat
 
 - `flatMapConcat`, `flattenConcat` : flow의 flow를 순차적으로 합침
-- flow 안에서 이전 collection이 완료되어야 다음 collection이 시작됨
+- inner flow가 완료되었을떄 다음 inner flow collect
 
 ````kotlin
 val startTime = System.currentTimeMillis() // remember the start time
@@ -2485,8 +2484,8 @@ Process finished with exit code 0
 #### flatMapMerge
 
 - `flatMapMerge`, `flattenMerge` : flow의 flow를 병렬로 합침
-- concurrent하게 합쳐서져서 value가 합쳐지는대로 출력
-- optional parameter로 `concurrency`를 지정하여 병렬로 합칠 수 있음
+- emit 되는 시점마다 inner flow와 병렬로 합쳐짐
+- optional parameter로 `concurrency`를 지정하여 병렬 수를 지정할 수 있음
 
 ````kotlin
 val startTime = System.currentTimeMillis() // remember the start time
@@ -2511,7 +2510,7 @@ Process finished with exit code 0
 #### flatMapLatest
 
 - `collectLatest` operator와 유사
-- 다음 flow에서 emit되면 이전 flow를 취소
+- flow에서 emit되면 이전 flow를 취소하고 새로운 flow를 실행
 
 ````kotlin
 val startTime = System.currentTimeMillis() // remember the start time

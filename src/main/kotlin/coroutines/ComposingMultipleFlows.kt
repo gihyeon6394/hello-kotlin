@@ -8,9 +8,9 @@ import kotlinx.coroutines.flow.*
  */
 
 suspend fun main() {
-//    val nums = (1..3).asFlow()
-//    val strs = flowOf("one", "two", "three")
-//    nums.zip(strs){ a, b -> "$a -> $b" }.collect { println(it)}
+    val nums = (1..3).asFlow()
+    val strs = flowOf("one", "two", "three", "four", "five")
+    nums.zip(strs){ a, b -> "$a -> $b" }.collect { println(it)} // "four" and "five" are not printed
 
     val nums1 = (1..3).asFlow().onEach { delay(300) } // numbers 1..3 every 300 ms
     val strs1 = flowOf("one", "two", "three").onEach { delay(400) } // strings every 400 ms
