@@ -2570,7 +2570,7 @@ Process finished with exit code 0
 
 #### Everything is caught
 
-- `map` operator 안에서 발생한 예외도 `collect`에서 잡힘
+- `map` operator같은 terminal operator 안에서 발생한 예외도 `collect`에서 잡힘
 
 ````kotlin
 fun simple(): Flow<String> =
@@ -2608,7 +2608,7 @@ Process finished with exit code 0
 
 ````kotlin
 simple()
-    .catch { e -> emit("Caught $e") } // emit on exception
+    .catch { e -> emit("Caught $e") } // emit on exception 문자열
     .collect { value -> println(value) }
 ````
 
@@ -2616,15 +2616,13 @@ simple()
 - `try/catch` 블럭 안에서 `flow` 빌더를 사용하여 emmit 하는것은 투명성 위반
 - collector가 던진 예외는 항상 flow의 `catch` 블럭에서 잡히는 것을 보장
 - emitter 가 `catch` operator 를 사용해 예외를 캡슐화할 수 있음
-    - `catch` operator가 잡는 예외
-        - `throw` 로 발생한 예외
-        - `catch` 바디에서 `emit` 하다 발생한 예외
-        - 무시되거나, 로깅되거나, 다른 방법으로 처리되는 예외
+    - 다시 `throw`
+    - 다른 값을 emit
+    - 예외를 무시
 
 #### Transparent catch
 
-- `catch` operator를 exception transparency를 위해 사용
-- 반드시 upstream 에서 발생한 예외를 잡아야함 (downstream에서 발생한 예외는 잡히지 않음)
+- 반드시 upstream 에서 발생한 예외만 잡음 (downstream에서 발생한 예외는 잡히지 않음)
 
 ````kotlin
 fun simple(): Flow<Int> = flow {
@@ -2656,7 +2654,7 @@ Exception in thread "main" java.lang.IllegalStateException: Collected 2
 
 #### Catching declaratively
 
-- `collect` 를 `onEach`로 변경하여 `catch` operator 이전에 배치
+- `onEach`로 변경하여 `catch` operator 이전에 배치해 upstream에서 발생한 예외를 잡음
 
 ````kotlin
 simple()
@@ -2716,8 +2714,8 @@ fun simple(): Flow<Int> = flow {
 
 fun main() = runBlocking<Unit> {
     simple()
-        .onCompletion { cause -> if (cause != null) println("Flow completed exceptionally") }
-        .catch { cause -> println("Caught exception") }
+        .onCompletion { cause -> if (cause != null) println("Flow completed exceptionally") } // exception 은 downstream으로 전파됨
+        .catch { cause -> println("Caught exception") } // 전파받은 exception을 catch
         .collect { value -> println(value) }
 }            
 ````
@@ -2731,7 +2729,7 @@ Caught exception
 #### Successful completion
 
 - `onCompletion` operator는 성공적인 완료에 대해서도 실행됨
-    - `null` cause를 받음
+    - cause가 null이면 upstream이 성공적으로 완료된 것임
 
 ````kotlin
 fun simple(): Flow<Int> = (1..3).asFlow()
@@ -2762,6 +2760,7 @@ Exception in thread "main" java.lang.IllegalStateException: Collected 2
 - declarative
     - `onCompletion` operator를 사용하여 flow의 완료를 처리
     - 성공적인 완료와 예외 완료를 구분할 수 있음
+    - `onCOmpletion`에서 예외가 발생하면 downstream으로 전파됨
 
 ### Launching flow
 
@@ -2769,10 +2768,10 @@ Exception in thread "main" java.lang.IllegalStateException: Collected 2
 - `addEventListener()` : 이벤트에 대한 리스너를 등록
 - `onEach` operator : 이벤트를 flow로 변환
 - `onEach` 는 intermediate operator이므로 terminal operator를 추가로 호출해야함 (e.g. `collect`)
-- `launchIn` : flow를 시작하고, 취소할 수 있는 `Job`을 반환 (별도의 코루틴에서 실행)
-    - 파라미터로 `CoroutineScope`를 전달
-    - `Job` 을 반환하기 때문에 `cancel`을 사용하여 flow를 취소할 수 있음
-- `onEach { ... }.launchIn(scope)` : 마치 이벤트 리스너처럼 작동함
+- `launchIn` : flow를 시작하고, `Job`을 반환 (별도의 코루틴에서 실행)
+    - 필수 파라미터로 `CoroutineScope`를 전달
+    - 반환한 `Job`으로 `cancel`을 사용하여 flow를 취소할 수 있음
+- `onEach { ... }.launchIn(scope)` : 마치 이벤트 리스너
     - 해당 scope이 취소되면 flow도 취소됨
 
 ````kotlin
