@@ -5,7 +5,6 @@ import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.produce
 import kotlinx.coroutines.runBlocking
-import kotlin.text.Typography.prime
 
 /**
  * @author gihyeon-kim
@@ -21,7 +20,6 @@ fun CoroutineScope.numbersFrom(start: Int) = produce {
 fun CoroutineScope.filter(numbers: ReceiveChannel<Int>, prime: Int) = produce {
     for (x in numbers) if (x % prime != 0) send(x)
 }
-
 
 fun main() = runBlocking {
     var cur = numbersFrom(2)

@@ -8,12 +8,12 @@ import kotlinx.coroutines.runBlocking
 /**
  * @author gihyeon-kim
  */
-fun CoroutineScope.produceNumbers() = produce<Int> {
+fun CoroutineScope.produceNumbers() = produce { // launch a new coroutine
     var x = 1
     while (true) send(x++) // infinite stream of integers starting from 1
 }
 
-fun CoroutineScope.square(numbers: ReceiveChannel<Int>): ReceiveChannel<Int> = produce {
+fun CoroutineScope.square(numbers: ReceiveChannel<Int>): ReceiveChannel<Int> = produce { // launch a new coroutine
     for (x in numbers) send(x * x)
 }
 

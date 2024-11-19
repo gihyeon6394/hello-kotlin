@@ -2897,7 +2897,8 @@ Exception in thread "main" kotlinx.coroutines.JobCancellationException: Blocking
 
 ## Channels
 
-- deferred value를 사용해서 코루틴 간에 값을 전달할 수 있음
+- 코루틴 간에 값 (Single value)을 전달할 수 있음
+- Differed value 를 사용하여 전달
 
 ### Channel basics
 
@@ -2907,7 +2908,6 @@ Exception in thread "main" kotlinx.coroutines.JobCancellationException: Blocking
     - `take` blocking 대신 suspending function `receive`
 
 ```kotlin
-
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -2927,8 +2927,8 @@ fun main() = runBlocking {
 
 ### Closing and iteration over channels
 
-- queue와 다릴, Channel은 다음 el이 없으면 닫을 수 있음
-- `for` loop를 사용하여 channel을 iterate 가능
+- queue와 달리, Channel은 다음 el이 없으면 닫을 수 있음
+- `for` loop를 사용하여 channel을 iterate 하다가 close token을 만나면 loop 종료
 - `close` : channel에 close token을 전송
 
 ```kotlin
@@ -2942,7 +2942,7 @@ fun main() = runBlocking {
         for (x in 1..5) channel.send(x * x)
         channel.close() // we're done sending
     }
-// here we print received values using `for` loop (until the channel is closed)
+    // here we print received values using `for` loop (until the channel is closed)
     for (y in channel) println(y)
     println("Done!")
 }
@@ -2962,6 +2962,8 @@ Process finished with exit code 0
 ### Building channel producers
 
 - producer-consumer 패턴
+- producter를 함수로 추상화하여 `Channel`을 파라미터로 받음
+    - 함수에서는 값을 프로듀싱하는 Channel 동작을 정의
 - `produce()` : 프로듀서 입장에서 사용하는 코루틴 빌더
 - `consumeEach` : 컨슈머 입장에서 사용하는 확장 함수
 
@@ -2985,8 +2987,8 @@ fun main() = runBlocking {
 
 ### Pipelines
 
-- pipeline 패턴 : 코루틴이 무한하게 값을 생성하게 함
-- 다른 코루틴은 해당 stream으로부터 소비하여 값을 가공
+- pipeline 패턴 : 값을 무한히 생산하는 하나의 코루틴
+- 다른 코루틴은 해당 stream으로부터 소비
 
 ```kotlin
 import kotlinx.coroutines.CoroutineScope
@@ -3055,7 +3057,6 @@ fun main() = runBlocking {
     - parallel processing을 위해서는 `produce`를 사용해야함
 
 ```kotlin
-
 fun CoroutineScope.numbersFrom(start: Int) = iterator {
     var x = start
     while (true) yield(x++) // infinite stream of integers from start
