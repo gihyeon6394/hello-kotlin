@@ -3119,7 +3119,6 @@ fun CoroutineScope.launchProcessor(id: Int, channel: ReceiveChannel<Int>) = laun
 - 여러 코루틴이 하나의 channel로 send
 
 ```kotlin
-
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
@@ -3154,8 +3153,10 @@ suspend fun sendString(channel: SendChannel<String>, s: String, time: Long) {
 - Unbefferd channel은 랑데부 : sender와 receiver가 만나면 그 즉시 element를 전달
     - sender가 보내면 receiver가 받을 때까지 기다림
     - receiver가 받으면 sender가 보낼 때까지 기다림
-- `Channel` 과 `produce` 는 파라미터로 `capacity`를 받음
+- `Channel()` 과 `produce()` 는 파라미터로 `capacity`를 받음
     - `capacity` : buffer size
+    - capacity가 찰떄까지는 suspending 되지 않음
+    - `BlockingQueue`와 유사
 
 ```kotlin
 import kotlinx.coroutines.channels.Channel
@@ -3234,8 +3235,11 @@ Process finished with exit code 0
 
 - 일정한 시간을 간격으로 `Unit` 을 보내는 특별한 랑데부 채널
 - 복잡한 time-based `produce()` 파이프라인에 유용
-- `ticker()` : 채널 생성
+- `ticker()` factory method : 채널 생성
 - `ReceiveChannel.cancel()` : 채널 취소
+- 백프레셔를 고려해 리시버가 멈추면 채널에 더이상 send하지 않음
+    - `TickerMode.FIXED_PERIOD` : delay를 가변적으로 조절
+    - `TickerMode.FIXED_DELAY` : 컨슈머와 관계없이 delay 유지
 
 ```kotlin
 package coroutines.channels

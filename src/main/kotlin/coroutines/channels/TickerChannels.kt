@@ -1,5 +1,6 @@
 package coroutines.channels
 
+import kotlinx.coroutines.channels.TickerMode
 import kotlinx.coroutines.channels.ticker
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -9,6 +10,12 @@ import kotlinx.coroutines.withTimeoutOrNull
  * @author gihyeon-kim
  */
 fun main() = runBlocking {
+    testFixedPeriod()
+    println("----------------------------------------------------")
+    testFixedDelay()
+}
+
+fun testFixedPeriod() = runBlocking {
     val tickerChannel = ticker(delayMillis = 200, initialDelayMillis = 0) // create a ticker channel
     var nextElement = withTimeoutOrNull(1) { tickerChannel.receive() }
     println("Initial element is available immediately: $nextElement") // no initial delay
@@ -31,3 +38,31 @@ fun main() = runBlocking {
 
     tickerChannel.cancel() // indicate that no more elements are needed
 }
+
+fun testFixedDelay() = runBlocking {
+    val tickerChannel = ticker(
+        delayMillis = 200,
+        initialDelayMillis = 0,
+        mode = TickerMode.FIXED_DELAY,
+    ) // create a ticker channel
+    var nextElement = withTimeoutOrNull(1) { tickerChannel.receive() }
+    println("Initial element is available immediately: $nextElement") // no initial delay
+
+    nextElement = withTimeoutOrNull(100) { tickerChannel.receive() } // all subsequent elements have 200ms delay
+    println("Next element is not ready in 100 ms: $nextElement")
+
+    nextElement = withTimeoutOrNull(120) { tickerChannel.receive() }
+    println("Next element is ready in 200 ms: $nextElement")
+
+    // Emulate large consumption delays
+    println("Consumer pauses for 300ms")
+    delay(300)
+    // Next element is available immediately
+    nextElement = withTimeoutOrNull(1) { tickerChannel.receive() }
+    println("Next element is available immediately after large consumer delay: $nextElement")
+    nextElement = withTimeoutOrNull(120) { tickerChannel.receive() }
+    println("Next element is not ready in 120ms after consumer consumed : $nextElement")
+
+    tickerChannel.cancel() // indicate that no more elements are needed
+}
+
