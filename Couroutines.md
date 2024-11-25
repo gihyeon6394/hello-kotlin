@@ -3292,10 +3292,11 @@ Process finished with exit code 0
 ### Exception propagation
 
 - `launch` 빌더 : 예외를 자동으로 전파
-    - root 코루틴 생성 시 예외를 **uncaught exception**으로 간주 (Java의 `Thread.uncatchExceptionHandler`와 유사)
+    - root 코루틴 생성 시 `launch`로 런치하면, 예외를 **uncaught exception**으로 간주 (Java의 `Thread.uncatchExceptionHandler`와 유사)
 - `async`, `produce` 빌더 : 예외를 유저에게 노출
     - 유저의 요청에 따라 예외를 처리
     - `await()`, `receive()`로 최종 예외를 처리
+    - `Deffered` 객체가 예외를 가지고 있음
 
 ```kotlin
 import kotlinx.coroutines.*
@@ -3431,7 +3432,7 @@ Process finished with exit code 0
 
 ### Exceptions aggregation
 
-- 여러 자식 코루틴이 예외를 발생하며 실패하면 먼저 발생한 예외가 전파되어서 핸들링 가능
+- 여러 자식 코루틴이 예외를 발생하며 실패하면 먼저 발생한 예외가 전파되어서 핸들링
 - 예외는 기본적으로 투명하고 래핑되지 않은 채로 전파됨
 
 ```kotlin
@@ -3597,7 +3598,8 @@ Process finished with exit code 0
 
 - 자식의 예외가 부모에게 전파되지 않기 떄문에
 - 모든 자식들은 스스로 예외를 핸들링할 수 있음
-- `superviserScope` 에서 런칭된 코루틴으 `CoroutineExceptionHandler` 를 사용하여 예외를 핸들링 가능
+- `superviserScope` 에서 런칭된 코루틴은 `CoroutineExceptionHandler` 를 사용하여 예외를 핸들링 가능
+    - `launch`로 런칭된 루트 코루틴처럼
 
 ```kotlin
 val handler = CoroutineExceptionHandler { _, exception ->
