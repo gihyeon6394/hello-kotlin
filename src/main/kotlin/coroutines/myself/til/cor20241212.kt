@@ -14,10 +14,11 @@ import kotlinx.coroutines.*
  * job2에서 스레드를 블로킹하는 바람에 job1을 실행할 스레드가 없다.
  */
 
-val singleThreadContext = newSingleThreadContext("singleThreadContext")
+//val singleThreadContext = newSingleThreadContext("singleThreadContext")
+val doubleThreadContext = newFixedThreadPoolContext(2, "doubleThreadContext")
 
 fun main() = runBlocking {
-    withContext(singleThreadContext) {
+    withContext(doubleThreadContext) {
         val job1 = async {
             logic_1()
         }
