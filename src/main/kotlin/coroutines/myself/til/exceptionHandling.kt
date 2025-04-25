@@ -7,7 +7,7 @@ import kotlinx.coroutines.*
  *
  * CoroutineExceptionHandler 은 오직 자식 코루틴들에게서 발생한 uncaught exception을 처리하는 루트 코루틴의 컨텍스트에 추가되는 핸들러이다.
  * uncaught exception :  try-catch로 처리되지 않은 예외
- * children coroutine : 해당 coroutine Context의 또 다른 Job으로 생성된 코루틴
+ * children coroutine : 어떤 코루틴의 coroutine Context을 상속 받아서 생긴 코루틴
  * children coroutine은 자신의 uncaught excpeiont 예외처리를 부모 코루틴에게 위임 -> 부모는 다시 그 상위 부모까지 위임해 최상위 (Root) 코루틴까지 위임됨
  * 따라서 자식 코루틴의 컨텍스트에 handler를 추가해도 그 handler가 동작하지 않음
  * aysnc빌더는 항상 모든 예외를 잡아 Deferred 객체에 넣어두기때문에 Handler가 동작하지 않음
@@ -16,16 +16,17 @@ import kotlinx.coroutines.*
  */
 fun log(msg: String) = println("[${Thread.currentThread().name}] $msg")
 const val COROUTINE_NAME_MAIN = "coroutine-main"
-const val COROUTINE_NAME_CHILD = "coroutine-child"
+const val COROUTINE_NAME_NEW = "coroutine-new"
 
 fun main() {
 
-    ex01()
-    ex02()
-    ex03()
-    ex04()
-    ex05()
-    ex06()
+//    ex01()
+//    ex02()
+//    ex03()
+//    ex04()
+//    ex05()
+//    ex06()
+    ex07()
     log("program end")
 }
 
@@ -45,7 +46,7 @@ suspend fun boom() {
  */
 fun ex01() = runBlocking(CoroutineName(COROUTINE_NAME_MAIN)) {
     log("start method")
-    launch(CoroutineName(COROUTINE_NAME_CHILD)) {
+    launch(CoroutineName(COROUTINE_NAME_NEW)) {
         boom()
     }
     delay(2000)
@@ -65,7 +66,7 @@ fun ex01() = runBlocking(CoroutineName(COROUTINE_NAME_MAIN)) {
  */
 fun ex02() = runBlocking(CoroutineName(COROUTINE_NAME_MAIN) + handler) {
     log("start method")
-    launch(CoroutineName(COROUTINE_NAME_CHILD)) {
+    launch(CoroutineName(COROUTINE_NAME_NEW)) {
         boom()
     }
     delay(2000)
@@ -86,7 +87,7 @@ fun ex02() = runBlocking(CoroutineName(COROUTINE_NAME_MAIN) + handler) {
 fun ex03() = runBlocking(CoroutineName(COROUTINE_NAME_MAIN)) {
     log("start method")
 
-    launch(CoroutineName(COROUTINE_NAME_CHILD) + handler) {
+    launch(CoroutineName(COROUTINE_NAME_NEW) + handler) {
         boom()
     }
     delay(2000)
@@ -137,10 +138,36 @@ fun ex05() = runBlocking(CoroutineName(COROUTINE_NAME_MAIN)) {
 fun ex06() = runBlocking(CoroutineName(COROUTINE_NAME_MAIN)) {
     log("start method")
     supervisorScope {
-        launch(CoroutineName(COROUTINE_NAME_CHILD) + handler) {
+        launch(CoroutineName(COROUTINE_NAME_NEW) + handler) {
             boom()
         }
         delay(2000)
         log("done")
     }
 }
+
+
+/**
+ * withContext를 사용해 새로운 context로 전환 (context 전화해도 부모-자식 관계는 유지됨)
+ * 결과 : 에러 파싱 못함
+ *
+ * $COROUTINE_NAME_NEW-2 은 $COROUTINE_NAME_NEW-1의 자식 코루틴 (자식 Job)
+ * $COROUTINE_NAME_NEW-1은 $COROUTINE_NAME_MAIN의 자식 코루틴 (자식 Job)
+ */
+fun ex07() = runBlocking(CoroutineName(COROUTINE_NAME_MAIN)) {
+    log("start method")
+    launch(CoroutineName("$COROUTINE_NAME_NEW-1")) {
+        withContext(Dispatchers.IO + handler) {
+            launch(CoroutineName("$COROUTINE_NAME_NEW-2")) {
+                delay(1000)
+            }
+            delay(2000)
+            log("done whatever~")
+        }
+        log("out of withContext")
+    }
+    log("out of launch")
+    delay(1500)
+    boom()
+}
+
